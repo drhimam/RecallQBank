@@ -48,8 +48,8 @@ const SubmitQuestion = () => {
       return;
     }
 
-    // Simulate duplicate check
-    if (data.question.toLowerCase().includes("nephrotic")) {
+    // Skip duplicate check when editing (only check for new submissions)
+    if (!editingQuestion && data.question.toLowerCase().includes("nephrotic")) {
       setIsDuplicate(true);
       toast.error("Possible duplicate detected!");
       return;
