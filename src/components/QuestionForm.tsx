@@ -183,8 +183,8 @@ export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProp
             <Label className="font-semibold mb-2">Answer Type</Label>
             <RadioGroup
               value={answerType}
-              onValueChange={(value: AnswerType) => {
-                setAnswerType(value);
+              onValueChange={(value: string) => {
+                setAnswerType(value as AnswerType);
                 setCorrectAnswers([]);
               }}
               className="flex space-x-4"
@@ -209,12 +209,16 @@ export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProp
             {Object.entries(options).map(([key, value]) => (
               <div key={key} className="flex items-center space-x-3 p-2 bg-white dark:bg-gray-800 rounded border">
                 {answerType === "single" ? (
-                  <RadioGroupItem
-                    value={key}
-                    id={`option-${key}`}
-                    checked={correctAnswers.includes(key)}
-                    onCheckedChange={() => handleAnswerSelection(key)}
-                  />
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id={`option-${key}`}
+                      name="correct-answer"
+                      className="h-4 w-4 rounded-full border border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={correctAnswers.includes(key)}
+                      onChange={() => handleAnswerSelection(key)}
+                    />
+                  </div>
                 ) : (
                   <Checkbox
                     id={`option-${key}`}
