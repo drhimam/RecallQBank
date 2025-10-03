@@ -3,6 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import MDEditor, { commands } from "@uiw/react-md-editor";
 import { AIGenerationButton } from "./AIGenerationButton";
 
@@ -11,21 +13,37 @@ type QuestionFormProps = {
   isModerator?: boolean;
 };
 
+type AnswerType = "single" | "multiple";
+
 export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProps) => {
   const [question, setQuestion] = useState<string>("");
   const [explanation, setExplanation] = useState<string>("");
   const [discussion, setDiscussion] = useState<string>("");
   const [hasOptions, setHasOptions] = useState(false);
+  const [answerType, setAnswerType] = useState<AnswerType>("single");
   const [options, setOptions] = useState<Record<string, string>>({
     A: "",
     B: "",
     C: "",
     D: "",
   });
+  const [correctAnswers, setCorrectAnswers] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleOptionChange = (key: string, value: string) => {
     setOptions(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleAnswerSelection = (key: string) => {
+    if (answerType === "single") {
+      setCorrectAnswers([key]);
+    } else {
+      setCorrectAnswers(prev =>
+        prev.includes(key)
+          ? prev.filter(k => k !== key)
+          : [...prev, key]
+      );
+    }
   };
 
   const addOption = () => {
@@ -42,6 +60,8 @@ export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProp
       const newOptions = { ...options };
       delete newOptions[keys[keys.length - 1]];
       setOptions(newOptions);
+      // Remove any correct answers that no longer exist
+      setCorrectAnswers(prev => prev.filter(k => k in newOptions));
     }
   };
 
@@ -82,6 +102,8 @@ export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProp
         explanation,
         discussion,
         options: hasOptions ? options : undefined,
+        answerType,
+        correctAnswers,
       });
     }
     setQuestion("");
@@ -93,6 +115,8 @@ export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProp
       C: "",
       D: "",
     });
+    setCorrectAnswers([]);
+    setAnswerType("single");
   };
 
   return (
@@ -154,38 +178,96 @@ export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProp
       </div>
 
       {hasOptions && (
-        <div className="space-y-2">
-          <Label>Options (A-G)</Label>
-          {Object.entries(options).map(([key, value]) => (
-            <div key={key} className="flex items-center space-x-2">
-              <span className="w-8 font-bold">{key}.</span>
-              <Input
-                value={value}
-                onChange={(e) => handleOptionChange(key, e.target.value)}
-                placeholder={`Option ${key}`}
-              />
-            </div>
-          ))}
-          <div className="flex space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addOption}
-              disabled={Object.keys(options).length >= 7}
+        <div className="space-y-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-900">
+          <div>
+            <Label className="font-semibold mb-2">Answer Type</Label>
+            <RadioGroup
+              value={answerType}
+              onValueChange={(value: AnswerType) => {
+                setAnswerType(value);
+                setCorrectAnswers([]);
+              }}
+              className="flex space-x-4"
             >
-              Add Option
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={removeOption}
-              disabled={Object.keys(options).length <= 4}
-            >
-              Remove Option
-            </Button>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="single" id="single" />
+                <Label htmlFor="single" className="cursor-pointer">
+                  Single Best Answer (Round)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="multiple" id="multiple" />
+                <Label htmlFor="multiple" className="cursor-pointer">
+                  Multiple Correct Answers (Square)
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
+
+          <div className="space-y-3">
+            <Label className="font-semibold">Options (A-G)</Label>
+            {Object.entries(options).map(([key, value]) => (
+              <div key={key} className="flex items-center space-x-3 p-2 bg-white dark:bg-gray-800 rounded border">
+                {answerType === "single" ? (
+                  <RadioGroupItem
+                    value={key}
+                    id={`option-${key}`}
+                    checked={correctAnswers.includes(key)}
+                    onCheckedChange={() => handleAnswerSelection(key)}
+                  />
+                ) : (
+                  <Checkbox
+                    id={`option-${key}`}
+                    checked={correctAnswers.includes(key)}
+                    onCheckedChange={() => handleAnswerSelection(key)}
+                  />
+                )}
+                <Label htmlFor={`option-${key}`} className="flex-1 cursor-pointer font-normal">
+                  <span className="font-bold mr-2">{key}.</span>
+                  <Input
+                    value={value}
+                    onChange={(e) => handleOptionChange(key, e.target.value)}
+                    placeholder={`Option ${key}`}
+                    className="flex-1"
+                  />
+                </Label>
+              </div>
+            ))}
+            
+            <div className="flex space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addOption}
+                disabled={Object.keys(options).length >= 7}
+              >
+                Add Option
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={removeOption}
+                disabled={Object.keys(options).length <= 4}
+              >
+                Remove Option
+              </Button>
+            </div>
+          </div>
+
+          {correctAnswers.length > 0 && (
+            <div className="bg-green-100 dark:bg-green-900 p-3 rounded">
+              <Label className="font-semibold">Selected Correct Answers:</Label>
+              <div className="mt-1 text-sm">
+                {correctAnswers.map(key => (
+                  <span key={key} className="bg-green-200 dark:bg-green-700 px-2 py-1 rounded mr-2">
+                    {key}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
