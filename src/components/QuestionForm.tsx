@@ -13,7 +13,6 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
   const [question, setQuestion] = useState<string>("");
   const [explanation, setExplanation] = useState<string>("");
   const [discussion, setDiscussion] = useState<string>("");
-  const [topics, setTopics] = useState("");
   const [hasOptions, setHasOptions] = useState(false);
   const [options, setOptions] = useState<Record<string, string>>({
     A: "",
@@ -50,14 +49,12 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
         question,
         explanation,
         discussion,
-        topics: topics.split(",").map((t) => t.trim()).filter(Boolean),
         options: hasOptions ? options : undefined,
       });
     }
     setQuestion("");
     setExplanation("");
     setDiscussion("");
-    setTopics("");
     setOptions({
       A: "",
       B: "",
@@ -157,14 +154,6 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
             }}
           />
         </div>
-      </div>
-      <div>
-        <label className="block font-medium mb-1">Topics (comma separated)</label>
-        <Input
-          value={topics}
-          onChange={(e) => setTopics(e.target.value)}
-          placeholder="e.g. Cardiology, Arrhythmia"
-        />
       </div>
       <Button type="submit" className="w-full">
         Submit Question
