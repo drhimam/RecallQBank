@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -11,11 +11,12 @@ import { AIGenerationButton } from "./AIGenerationButton";
 type QuestionFormProps = {
   onSubmit?: (data: any) => void;
   isModerator?: boolean;
+  initialData?: any;
 };
 
 type AnswerType = "single" | "multiple";
 
-export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProps) => {
+export const QuestionForm = ({ onSubmit, isModerator = false, initialData }: QuestionFormProps) => {
   const [question, setQuestion] = useState<string>("");
   const [explanation, setExplanation] = useState<string>("");
   const [discussion, setDiscussion] = useState<string>("");
@@ -29,6 +30,22 @@ export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProp
   });
   const [correctAnswers, setCorrectAnswers] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (initialData) {
+      setQuestion(initialData.question || "");
+      setExplanation(initialData.explanation || "");
+      setDiscussion(initialData.discussion || "");
+      
+      if (initialData.options) {
+        setHasOptions(true);
+        setOptions(initialData.options);
+        setCorrectAnswers(initialData.correctAnswers || []);
+        setAnswerType(initialData.answerType || "single");
+      }
+    }
+  }, [initialData]);
 
   const handleOptionChange = (key: string, value: string) => {
     setOptions(prev => ({ ...prev, [key]: value }));
@@ -106,17 +123,22 @@ export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProp
         correctAnswers,
       });
     }
-    setQuestion("");
-    setExplanation("");
-    setDiscussion("");
-    setOptions({
-      A: "",
-      B: "",
-      C: "",
-      D: "",
-    });
-    setCorrectAnswers([]);
-    setAnswerType("single");
+    
+    // Only reset form if not editing
+    if (!initialData) {
+      setQuestion("");
+      setExplanation("");
+      setDiscussion("");
+      setOptions({
+        A: "",
+        B: "",
+        C: "",
+        D: "",
+      });
+      setCorrectAnswers([]);
+      setAnswerType("single");
+      setHasOptions(false);
+    }
   };
 
   return (
@@ -354,7 +376,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProp
       </div>
       
       <Button type="submit" className="w-full">
-        Submit Question
+        {initialData ? "Update Question" : "Submit Question"}
       </Button>
     </form>
   );
