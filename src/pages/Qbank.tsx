@@ -78,6 +78,25 @@ const mockQuestions = [
   }
 ];
 
+// Mock Qbank-wide statistics
+const qbankStats = {
+  exams: [
+    { name: "MRCP", total: 420, unlocked: 15 },
+    { name: "FCPS", total: 380, unlocked: 12 },
+    { name: "USMLE", total: 320, unlocked: 8 },
+    { name: "NEET-PG", total: 120, unlocked: 5 }
+  ],
+  subjects: [
+    { name: "Cardiology", total: 280, unlocked: 18 },
+    { name: "Nephrology", total: 190, unlocked: 10 },
+    { name: "Neurology", total: 220, unlocked: 7 },
+    { name: "Pharmacology", total: 180, unlocked: 5 },
+    { name: "Pathology", total: 150, unlocked: 3 },
+    { name: "Physiology", total: 120, unlocked: 2 },
+    { name: "Medicine", total: 100, unlocked: 1 }
+  ]
+};
+
 const Qbank = () => {
   const [mode, setMode] = useState<"study" | "test">("study");
   const [activeTab, setActiveTab] = useState<"statistics" | "questions">("statistics");
@@ -289,6 +308,67 @@ const Qbank = () => {
                       You've answered {mockStats.lastWeek.reduce((sum, day) => sum + day.count, 0)} questions this week
                     </p>
                   </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Qbank-wide Statistics */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* By Exam */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    Questions by Exam
+                  </CardTitle>
+                  <CardDescription>
+                    Distribution across different medical exams
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {qbankStats.exams.map((exam, index) => {
+                    const percentage = (exam.unlocked / exam.total) * 100;
+                    return (
+                      <div key={index}>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-sm font-medium">{exam.name}</span>
+                          <span className="text-sm text-gray-500">
+                            {exam.unlocked} / {exam.total}
+                          </span>
+                        </div>
+                        <Progress value={percentage} className="h-2" />
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+
+              {/* By Subject */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    Questions by Subject
+                  </CardTitle>
+                  <CardDescription>
+                    Distribution across medical subjects
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {qbankStats.subjects.map((subject, index) => {
+                    const percentage = (subject.unlocked / subject.total) * 100;
+                    return (
+                      <div key={index}>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-sm font-medium">{subject.name}</span>
+                          <span className="text-sm text-gray-500">
+                            {subject.unlocked} / {subject.total}
+                          </span>
+                        </div>
+                        <Progress value={percentage} className="h-2" />
+                      </div>
+                    );
+                  })}
                 </CardContent>
               </Card>
             </div>
