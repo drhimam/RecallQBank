@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import MDEditor, { commands } from "@uiw/react-md-editor";
+import { AIGenerationButton } from "./AIGenerationButton";
 
 type QuestionFormProps = {
   onSubmit?: (data: any) => void;
+  isModerator?: boolean;
 };
 
-export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
+export const QuestionForm = ({ onSubmit, isModerator = false }: QuestionFormProps) => {
   const [question, setQuestion] = useState<string>("");
   const [explanation, setExplanation] = useState<string>("");
   const [discussion, setDiscussion] = useState<string>("");
@@ -104,7 +106,15 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
       />
       
       <div>
-        <label className="block font-medium mb-1">Question</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block font-medium">Question</label>
+          {isModerator && (
+            <AIGenerationButton
+              onContentGenerated={setQuestion}
+              context="medical exam question"
+            />
+          )}
+        </div>
         <MDEditor
           value={question}
           onChange={(value) => setQuestion(value || "")}
@@ -180,7 +190,15 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
       )}
 
       <div>
-        <label className="block font-medium mb-1">Explanation</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block font-medium">Explanation</label>
+          {isModerator && (
+            <AIGenerationButton
+              onContentGenerated={setExplanation}
+              context="medical explanation"
+            />
+          )}
+        </div>
         <MDEditor
           value={explanation}
           onChange={(value) => setExplanation(value || "")}
@@ -209,8 +227,17 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
           ]}
         />
       </div>
+      
       <div>
-        <label className="block font-medium mb-1">Discussion</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block font-medium">Discussion</label>
+          {isModerator && (
+            <AIGenerationButton
+              onContentGenerated={setDiscussion}
+              context="medical discussion points"
+            />
+          )}
+        </div>
         <MDEditor
           value={discussion}
           onChange={(value) => setDiscussion(value || "")}
@@ -239,6 +266,7 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
           ]}
         />
       </div>
+      
       <Button type="submit" className="w-full">
         Submit Question
       </Button>

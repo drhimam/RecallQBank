@@ -8,6 +8,9 @@ const SubmitQuestion = () => {
   const [submitted, setSubmitted] = useState(false);
   const [categories, setCategories] = useState<any>({});
   const [isDuplicate, setIsDuplicate] = useState(false);
+  
+  // In a real app, this would come from authentication context
+  const isModerator = localStorage.getItem('userRole') === 'moderator';
 
   const handleSubmit = (data: any) => {
     // Simulate duplicate check
@@ -43,6 +46,7 @@ const SubmitQuestion = () => {
           />
           <QuestionForm
             onSubmit={(data) => handleSubmit({ ...data, ...categories })}
+            isModerator={isModerator}
           />
         </>
       )}
