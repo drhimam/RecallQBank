@@ -8,7 +8,28 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Edit, Trash2, Eye, Plus, BarChart3, FileText, CheckCircle, Clock, Search, Download, Upload, FileJson, FileSpreadsheet } from "lucide-react";
+import { 
+  Edit, 
+  Trash2, 
+  Eye, 
+  Plus, 
+  BarChart3, 
+  FileText, 
+  CheckCircle, 
+  Clock, 
+  Search, 
+  Upload, 
+  FileJson, 
+  FileSpreadsheet,
+  Download,
+  MoreHorizontal
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Footer } from "@/components/Footer";
 
 const SubmitQuestion = () => {
@@ -128,11 +149,17 @@ const SubmitQuestion = () => {
     setIsDuplicate(false);
   };
 
+  // Get current date and time for export
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    return now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  };
+
   // Export functions
   const exportToJSON = () => {
     const dataStr = JSON.stringify(userContributions, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = 'contributions.json';
+    const exportFileDefaultName = `contributions-${getCurrentDateTime()}.json`;
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
@@ -141,7 +168,11 @@ const SubmitQuestion = () => {
   };
 
   const exportToMarkdown = () => {
-    let markdownContent = "# My Question Contributions\n\n";
+    let markdownContent = `# My Question Contributions\n\n`;
+    markdownContent += `Exported on: ${new Date().toLocaleString()}\n\n`;
+    markdownContent += `Total questions: ${userContributions.length}\n\n`;
+    markdownContent += `---\n\n`;
+    
     userContributions.forEach((q, index) => {
       markdownContent += `## Question ${index + 1}\n\n`;
       markdownContent += `**Question:** ${q.question}\n\n`;
@@ -171,7 +202,7 @@ const SubmitQuestion = () => {
     });
     
     const dataUri = 'data:text/markdown;charset=utf-8,'+ encodeURIComponent(markdownContent);
-    const exportFileDefaultName = 'contributions.md';
+    const exportFileDefaultName = `contributions-${getCurrentDateTime()}.md`;
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
@@ -181,7 +212,8 @@ const SubmitQuestion = () => {
 
   const exportToExcel = () => {
     // Simple CSV export for now
-    let csvContent = "Question,Options,Answer,Explanation,Exam,Subject,Topics,Tags,Status\n";
+    let csvContent = `Exported on: ${new Date().toLocaleString()}\n`;
+    csvContent += "Question,Options,Answer,Explanation,Exam,Subject,Topics,Tags,Status\n";
     userContributions.forEach(q => {
       const options = q.options ? Object.entries(q.options).map(([k, v]) => `${k}. ${v}`).join("; ") : "";
       const topics = q.topics ? q.topics.join("; ") : "";
@@ -190,7 +222,7 @@ const SubmitQuestion = () => {
     });
     
     const dataUri = 'data:text/csv;charset=utf-8,'+ encodeURIComponent(csvContent);
-    const exportFileDefaultName = 'contributions.csv';
+    const exportFileDefaultName = `contributions-${getCurrentDateTime()}.csv`;
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
@@ -383,21 +415,6 @@ const SubmitQuestion = () => {
                     />
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="outline" size="sm" onClick={exportToJSON}>
-                      <FileJson className="w-4 h-4 mr-1" />
-                      JSON
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={exportToMarkdown}>
-                      <Download className="w-4 h-4 mr-1" />
-                      MD
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={exportToExcel}>
-                      <FileSpreadsheet className="w-4 h-4 mr-1" />
-                      Excel
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={exportToPDF}>
-                      PDF
-                    </Button>
                     <Button variant="outline" size="sm" onClick={handleImportClick}>
                       <Upload className="w-4 h-4 mr-1" />
                       Import
@@ -409,6 +426,32 @@ const SubmitQuestion = () => {
                       accept=".json,.csv,.xlsx"
                       onChange={handleFileImport}
                     />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Download className="w-4 h-4 mr-1" />
+                          Export
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={exportToJSON}>
+                          <FileJson className="w-4 h-4 mr-2" />
+                          Export as JSON
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={exportToMarkdown}>
+                          <FileText className="w-4 h-4 mr-2" />
+                          Export as Markdown
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={exportToExcel}>
+                          <FileSpreadsheet className="w-4 h-4 mr-2" />
+                          Export as Excel (CSV)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={exportToPDF}>
+                          <FileText className="w-4 h-4 mr-2" />
+                          Export as PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
