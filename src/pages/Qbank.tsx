@@ -13,9 +13,27 @@ import {
   BarChart3,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  Eye,
+  Flag,
+  RotateCcw,
+  ThumbsUp,
+  ThumbsDown,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  Pause,
+  Play,
+  Settings
 } from "lucide-react";
 import { Footer } from "@/components/Footer";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Mock data for statistics
 const mockStats = {
@@ -42,12 +60,21 @@ const mockStats = {
 const mockQuestions = [
   {
     id: 1,
-    question: "A 65-year-old man presents with chest pain and shortness of breath. What is the most likely diagnosis?",
+    question: "A 65-year-old man presents with chest pain and shortness of breath that started 2 hours ago. He has a history of hypertension and type 2 diabetes. On examination, his blood pressure is 160/95 mmHg, heart rate is 110 bpm, and respiratory rate is 22/min. ECG shows ST-segment elevation in leads II, III, and aVF. What is the most appropriate immediate management?",
     exam: "MRCP",
     subject: "Cardiology",
     topics: ["Chest Pain", "Acute Coronary Syndrome"],
     tags: ["ECG", "Emergency"],
-    status: "unlocked"
+    status: "unlocked",
+    options: [
+      { id: "A", text: "Administer sublingual nitroglycerin and aspirin" },
+      { id: "B", text: "Perform urgent coronary angiography" },
+      { id: "C", text: "Start heparin infusion" },
+      { id: "D", text: "Give beta-blocker to control heart rate" }
+    ],
+    correctAnswer: "B",
+    explanation: "In a patient with STEMI (ST-elevation myocardial infarction), the most appropriate immediate management is urgent coronary angiography with possible percutaneous coronary intervention (PCI). This is the definitive treatment for STEMI and should be performed within 90 minutes of first medical contact if possible. While aspirin and nitroglycerin are important initial treatments, they are not the definitive management. Heparin may be used as an adjunct, and beta-blockers are not first-line for immediate management in STEMI.",
+    discussion: "STEMI is a medical emergency requiring immediate reperfusion therapy. Primary PCI is preferred over fibrinolytic therapy when available within 90-120 minutes. Door-to-balloon time should be less than 90 minutes. Time is muscle - the sooner reperfusion occurs, the better the outcome."
   },
   {
     id: 2,
@@ -56,7 +83,16 @@ const mockQuestions = [
     subject: "Nephrology",
     topics: ["Renal", "Proteinuria"],
     tags: ["Urine", "Lab"],
-    status: "unlocked"
+    status: "unlocked",
+    options: [
+      { id: "A", text: "Proteinuria > 3.5g/day" },
+      { id: "B", text: "Hypoalbuminemia" },
+      { id: "C", text: "Hyperlipidemia" },
+      { id: "D", text: "Hematuria" }
+    ],
+    correctAnswer: "D",
+    explanation: "Nephrotic syndrome is characterized by the classic triad of heavy proteinuria (>3.5g/day), hypoalbuminemia, and edema. Hyperlipidemia is also commonly present due to increased hepatic lipoprotein synthesis. Hematuria, however, is not a feature of nephrotic syndrome but rather of nephritic syndrome, which is characterized by hematuria, hypertension, and reduced glomerular filtration rate.",
+    discussion: "Nephrotic syndrome results from increased glomerular permeability to proteins. The primary defect is in the glomerular basement membrane or podocyte structure. Common causes include minimal change disease (in children), focal segmental glomerulosclerosis, and membranous nephropathy (in adults)."
   },
   {
     id: 3,
@@ -65,16 +101,34 @@ const mockQuestions = [
     subject: "Cardiology",
     topics: ["MI", "Emergency"],
     tags: ["Pharmacology"],
-    status: "locked"
+    status: "locked",
+    options: [
+      { id: "A", text: "Aspirin" },
+      { id: "B", text: "Nitroglycerin" },
+      { id: "C", text: "Beta-blockers" },
+      { id: "D", text: "Calcium channel blockers" }
+    ],
+    correctAnswer: "D",
+    explanation: "Calcium channel blockers are not routinely used in the acute management of myocardial infarction and may actually be harmful in some cases. Aspirin is an antiplatelet agent that is essential in MI management. Nitroglycerin helps with chest pain and reduces preload. Beta-blockers reduce myocardial oxygen demand and are beneficial in MI.",
+    discussion: "The management of acute MI focuses on rapid reperfusion, pain relief, and reducing myocardial oxygen demand. Modern treatment includes dual antiplatelet therapy (aspirin plus a P2Y12 inhibitor), anticoagulation, and prompt reperfusion either by primary PCI or fibrinolysis."
   },
   {
     id: 4,
-    question: "A patient presents with sudden onset severe headache. Which investigation is most appropriate?",
+    question: "A patient presents with sudden onset severe headache described as 'the worst headache of my life'. Which investigation is most appropriate?",
     exam: "USMLE",
     subject: "Neurology",
     topics: ["Headache", "Emergency"],
     tags: ["Imaging"],
-    status: "locked"
+    status: "locked",
+    options: [
+      { id: "A", text: "CT scan of the head without contrast" },
+      { id: "B", text: "MRI of the brain" },
+      { id: "C", text: "Lumbar puncture" },
+      { id: "D", text: "CT angiography" }
+    ],
+    correctAnswer: "A",
+    explanation: "In a patient presenting with sudden onset severe headache ('thunderclap headache'), the immediate concern is subarachnoid hemorrhage (SAH). Non-contrast CT scan of the head is the first-line investigation as it is highly sensitive for detecting SAH, especially within the first 6 hours of symptom onset. If CT is negative but clinical suspicion remains high, lumbar puncture should be performed.",
+    discussion: "Thunderclap headache is a medical emergency that requires immediate evaluation. Other causes include reversible cerebral vasoconstriction syndrome, cerebral venous sinus thrombosis, and pituitary apoplexy. The classic presentation of SAH is a sudden, severe headache that reaches maximum intensity within seconds to minutes."
   }
 ];
 
@@ -101,10 +155,38 @@ const Qbank = () => {
   const [mode, setMode] = useState<"study" | "test">("study");
   const [activeTab, setActiveTab] = useState<"statistics" | "questions">("statistics");
   const [answered, setAnswered] = useState<number[]>([0, 1]); // indices of answered questions
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [userNotes, setUserNotes] = useState("");
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isFlagged, setIsFlagged] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(3600); // 1 hour in seconds
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [testSettings, setTestSettings] = useState({
+    timeLimit: 60, // minutes
+    questionsPerTest: 10,
+    randomizeQuestions: true,
+    showTimer: true
+  });
 
   // Filter questions based on access
   const unlockedQuestions = mockQuestions.filter(q => q.status === "unlocked");
   const lockedQuestions = mockQuestions.filter(q => q.status === "locked");
+  const currentQuestion = unlockedQuestions[currentQuestionIndex];
+
+  // Timer effect
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isTimerRunning && timeRemaining > 0 && mode === "test") {
+      timer = setTimeout(() => {
+        setTimeRemaining(timeRemaining - 1);
+      }, 1000);
+    } else if (timeRemaining === 0 && mode === "test") {
+      setIsTimerRunning(false);
+    }
+    return () => clearTimeout(timer);
+  }, [isTimerRunning, timeRemaining, mode]);
 
   const handleMarkAnswered = (idx: number) => {
     if (!answered.includes(idx)) {
@@ -112,10 +194,62 @@ const Qbank = () => {
     }
   };
 
+  const handleAnswerSelect = (answerId: string) => {
+    setSelectedAnswer(answerId);
+    if (mode === "study") {
+      setShowExplanation(true);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < unlockedQuestions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setSelectedAnswer(null);
+      setShowExplanation(false);
+    }
+  };
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      setSelectedAnswer(null);
+      setShowExplanation(false);
+    }
+  };
+
+  const handleShowAnswer = () => {
+    setShowExplanation(true);
+  };
+
+  const handleStartTest = () => {
+    setMode("test");
+    setCurrentQuestionIndex(0);
+    setSelectedAnswer(null);
+    setShowExplanation(false);
+    setTimeRemaining(testSettings.timeLimit * 60);
+    setIsTimerRunning(true);
+  };
+
+  const handlePauseTest = () => {
+    setIsTimerRunning(!isTimerRunning);
+  };
+
+  const handleEndTest = () => {
+    setMode("study");
+    setIsTimerRunning(false);
+  };
+
   // Calculate progress percentages
   const contributionProgress = Math.min(100, (mockStats.unlocked / mockStats.totalQuestions) * 100);
   const subscriptionProgress = mockStats.subscriptionActive ? 100 : 0;
   const answeredProgress = (mockStats.answered / mockStats.unlocked) * 100;
+
+  // Format time for display
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -133,11 +267,11 @@ const Qbank = () => {
             </Button>
             <Button
               variant={mode === "test" ? "default" : "outline"}
-              onClick={() => setMode("test")}
+              onClick={mode === "test" ? handleEndTest : handleStartTest}
               className="flex items-center gap-2"
             >
               <Target className="w-4 h-4" />
-              Test Mode
+              {mode === "test" ? "End Test" : "Test Mode"}
             </Button>
           </div>
         </div>
@@ -373,127 +507,291 @@ const Qbank = () => {
               </Card>
             </div>
           </div>
-        ) : (
-          /* Questions Tab */
-          <div>
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">Available Questions</h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                {mockStats.unlocked} questions unlocked • {lockedQuestions.length} more with subscription
-              </p>
+        ) : mode === "study" ? (
+          /* Study Mode */
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{currentQuestion?.exam}</Badge>
+                <Badge variant="outline">{currentQuestion?.subject}</Badge>
+                {currentQuestion?.topics.map((topic, idx) => (
+                  <Badge key={idx} variant="outline" className="text-xs">
+                    {topic}
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsBookmarked(!isBookmarked)}
+                  className={isBookmarked ? "text-blue-600" : ""}
+                >
+                  <Bookmark className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsFlagged(!isFlagged)}
+                  className={isFlagged ? "text-red-600" : ""}
+                >
+                  <Flag className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {/* Unlocked Questions */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Unlock className="w-4 h-4 text-green-500" />
-                    Unlocked Questions ({unlockedQuestions.length})
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {unlockedQuestions.map((q, i) => (
-                    <Card key={q.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium text-sm line-clamp-2 flex-1 mr-2">
-                            {q.question}
-                          </h4>
-                          <Badge 
-                            variant="secondary" 
-                            className="text-xs"
-                          >
-                            {q.exam}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          <Badge variant="outline" className="text-xs">
-                            {q.subject}
-                          </Badge>
-                          {q.topics.map((topic, idx) => (
-                            <Badge key={idx} variant="outline" className="text-xs">
-                              {topic}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div className="flex gap-1">
-                            {q.tags.map((tag, idx) => (
-                              <Badge key={idx} variant="default" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant={answered.includes(i) ? "secondary" : "default"}
-                            onClick={() => handleMarkAnswered(i)}
-                          >
-                            {answered.includes(i) ? "Answered" : "Answer"}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Question {currentQuestionIndex + 1} of {unlockedQuestions.length}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</p>
+                
+                <RadioGroup 
+                  value={selectedAnswer || ""} 
+                  onValueChange={handleAnswerSelect}
+                  className="space-y-3 mb-6"
+                >
+                  {currentQuestion?.options.map((option) => (
+                    <div 
+                      key={option.id} 
+                      className={`flex items-start p-3 rounded-lg border ${
+                        selectedAnswer === option.id 
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                          : "border-gray-200 dark:border-gray-700"
+                      } ${
+                        showExplanation && option.id === currentQuestion.correctAnswer
+                          ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                          : ""
+                      } ${
+                        showExplanation && selectedAnswer === option.id && option.id !== currentQuestion.correctAnswer
+                          ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                          : ""
+                      }`}
+                    >
+                      <RadioGroupItem 
+                        value={option.id} 
+                        id={option.id} 
+                        className="mt-1"
+                        disabled={showExplanation}
+                      />
+                      <Label 
+                        htmlFor={option.id} 
+                        className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer"
+                      >
+                        <span className="font-medium mr-2">{option.id}.</span>
+                        {option.text}
+                      </Label>
+                    </div>
                   ))}
-                </div>
-              </div>
+                </RadioGroup>
 
-              {/* Locked Questions */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-gray-500" />
-                    Locked Questions ({lockedQuestions.length})
-                  </h3>
-                  <Button variant="outline" size="sm">
-                    Subscribe for Full Access
+                {showExplanation && (
+                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
+                    <div>
+                      <h3 className="font-semibold mb-2">Explanation:</h3>
+                      <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Discussion:</h3>
+                      <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
+                    </div>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <ThumbsUp className="w-4 h-4 mr-1" />
+                          Helpful
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <ThumbsDown className="w-4 h-4 mr-1" />
+                          Not Helpful
+                        </Button>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        <MessageCircle className="w-4 h-4 mr-1" />
+                        Discuss
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
+                    <Textarea
+                      id="notes"
+                      value={userNotes}
+                      onChange={(e) => setUserNotes(e.target.value)}
+                      placeholder="Add your notes here..."
+                      className="mt-1"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-between">
+              <Button
+                onClick={handlePreviousQuestion}
+                disabled={currentQuestionIndex === 0}
+                variant="outline"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Previous
+              </Button>
+              <div className="flex gap-2">
+                {!showExplanation && selectedAnswer && (
+                  <Button onClick={handleShowAnswer}>
+                    Check Answer
                   </Button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {lockedQuestions.map((q) => (
-                    <Card key={q.id} className="opacity-70">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium text-sm line-clamp-2 flex-1 mr-2">
-                            {q.question}
-                          </h4>
-                          <Badge 
-                            variant="secondary" 
-                            className="text-xs"
-                          >
-                            {q.exam}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          <Badge variant="outline" className="text-xs">
-                            {q.subject}
-                          </Badge>
-                          {q.topics.map((topic, idx) => (
-                            <Badge key={idx} variant="outline" className="text-xs">
-                              {topic}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div className="flex gap-1">
-                            {q.tags.map((tag, idx) => (
-                              <Badge key={idx} variant="default" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                          <Button size="sm" variant="outline" disabled>
-                            <Lock className="w-3 h-3 mr-1" />
-                            Locked
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                )}
+                <Button
+                  onClick={handleNextQuestion}
+                  disabled={currentQuestionIndex === unlockedQuestions.length - 1}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
               </div>
             </div>
+          </div>
+        ) : (
+          /* Test Mode */
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{currentQuestion?.exam}</Badge>
+                <Badge variant="outline">{currentQuestion?.subject}</Badge>
+              </div>
+              <div className="flex items-center gap-4">
+                {testSettings.showTimer && (
+                  <div className="flex items-center gap-2">
+                    <div className={`px-3 py-1 rounded font-mono ${
+                      timeRemaining < 300 ? "text-red-600 bg-red-100" : "text-gray-700 bg-gray-100"
+                    }`}>
+                      {formatTime(timeRemaining)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePauseTest}
+                    >
+                      {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                )}
+                <Button variant="outline" size="sm">
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Question {currentQuestionIndex + 1} of {unlockedQuestions.length}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</p>
+                
+                <RadioGroup 
+                  value={selectedAnswer || ""} 
+                  onValueChange={handleAnswerSelect}
+                  className="space-y-3 mb-6"
+                >
+                  {currentQuestion?.options.map((option) => (
+                    <div 
+                      key={option.id} 
+                      className={`flex items-start p-3 rounded-lg border ${
+                        selectedAnswer === option.id 
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                          : "border-gray-200 dark:border-gray-700"
+                      }`}
+                    >
+                      <RadioGroupItem 
+                        value={option.id} 
+                        id={option.id} 
+                        className="mt-1"
+                      />
+                      <Label 
+                        htmlFor={option.id} 
+                        className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer"
+                      >
+                        <span className="font-medium mr-2">{option.id}.</span>
+                        {option.text}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-between">
+              <Button
+                onClick={handlePreviousQuestion}
+                disabled={currentQuestionIndex === 0}
+                variant="outline"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Previous
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsFlagged(!isFlagged)}
+                >
+                  <Flag className="w-4 h-4 mr-1" />
+                  {isFlagged ? "Unflag" : "Flag"}
+                </Button>
+                <Button
+                  onClick={handleNextQuestion}
+                  disabled={currentQuestionIndex === unlockedQuestions.length - 1}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Test Progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Answered: {answered.length} of {unlockedQuestions.length}
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Flagged: 1
+                  </span>
+                </div>
+                <Progress 
+                  value={(answered.length / unlockedQuestions.length) * 100} 
+                  className="mb-4" 
+                />
+                <div className="flex justify-center gap-2">
+                  {unlockedQuestions.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`w-3 h-3 rounded-full ${
+                        index === currentQuestionIndex
+                          ? "bg-blue-600"
+                          : answered.includes(index)
+                          ? "bg-green-500"
+                          : isFlagged && index === currentQuestionIndex
+                          ? "bg-red-500"
+                          : "bg-gray-200 dark:bg-gray-700"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>
