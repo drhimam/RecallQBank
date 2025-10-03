@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import极 { Switch } from "@/components/ui/switch";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,7 +31,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
     C: "",
     D: "",
   });
-  const [correctAnswers, setCorrectAnswers极] = useState<string[]>([]);
+  const [correctAnswers, setCorrectAnswers] = useState<string[]>([]);
   const [aiContext, setAiContext] = useState<string>("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [urls, setUrls] = useState<string[]>([]);
@@ -59,7 +59,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
   }, [initialData]);
 
   const handleOptionChange = (key: string, value: string) => {
-    setOptions(prev => ({ ...prev, [极key]: value }));
+    setOptions(prev => ({ ...prev, [key]: value }));
   };
 
   const handleAnswerSelection = (key: string) => {
@@ -97,7 +97,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.on极load = (e) => {
+      reader.onload = (e) => {
         const imageDataUrl = e.target?.result as string;
         const markdownImage = `![${file.name}](${imageDataUrl})`;
         setValue(currentValue + markdownImage);
@@ -106,7 +106,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
     }
   };
 
-  const handleContextFileUpload = (event: React.Change极Event<HTMLInputElement>) => {
+  const handleContextFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       const newFiles = Array.from(files);
@@ -131,7 +131,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
   const addUrl = () => {
     if (currentUrl.trim() && !urls.includes(currentUrl.trim())) {
       setUrls(prev => [...prev, currentUrl.trim()]);
-      setAiContext(prev => prev + `\极n\n[URL: ${currentUrl.trim()}]`);
+      setAiContext(prev => prev + `\n\n[URL: ${currentUrl.trim()}]`);
       setCurrentUrl("");
     }
   };
@@ -140,14 +140,14 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
     setUrls(prev => prev.filter((_, i) => i !== index));
   };
 
-  const createImageUploadCommand = (setValue: (value: string) => void, currentValue: string极) => {
+  const createImageUploadCommand = (setValue: (value: string) => void, currentValue: string) => {
     return {
       name: "image-upload",
       keyCommand: "imageUpload",
       buttonProps: { "aria-label": "Insert image from device" },
       icon: (
         <svg width="12" height="12" viewBox="0 0 20 20">
-          <path fill="currentColor" d="M15 9c极1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm4-7H1c-.55 0-1 .45-1 1极v14c0 .55.45 1 极1 1h18c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1zm-1 13H2V4h16v11zm-6-1l-3-3-3 3-4-4v11h16V9l-4 4z"/>
+          <path fill="currentColor" d="M15 9c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm4-7H1c-.55 0-1 .45-1 1v14c0 .55.45 1 1 1h18c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1zm-1 13H2V4h16v11zm-6-1l-3-3-3 3-4-4v11h16V9l-4 4z"/>
         </svg>
       ),
       execute: () => {
@@ -208,7 +208,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
     <form className="space-y-4" onSubmit={handleSubmit}>
       <input
         type="file"
-        ref={fileInputRef极}
+        ref={fileInputRef}
         accept="image/*"
         style={{ display: 'none' }}
         onChange={(e) => handleImageUpload(e, setQuestion, question)}
@@ -227,7 +227,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
         <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
           <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-3">AI Generation Context</h3>
           
-          <div className="space极-y-3">
+          <div className="space-y-3">
             <div>
               <Label htmlFor="ai-context" className="text-blue-700 dark:text-blue-300">Additional Context</Label>
               <Textarea
@@ -241,10 +241,10 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
             </div>
             
             <div>
-              <Label className="text-blue-7极00 dark:text-blue-300">Upload Files</Label>
-             极 <div className="flex gap-2 mt-1">
+              <Label className="text-blue-700 dark:text-blue-300">Upload Files</Label>
+              <div className="flex gap-2 mt-1">
                 <Button
-                  type="极button"
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => contextFileInputRef.current?.click()}
@@ -261,7 +261,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
                         <button
                           type="button"
                           onClick={() => removeFile(index)}
-                          className="ml-1 text-red-500 hover:text-red-7极00"
+                          className="ml-1 text-red-500 hover:text-red-700"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -296,7 +296,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
               {urls.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {urls.map((url, index) => (
-                    <div key={index极} className="flex items-center bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded极 text-sm">
+                    <div key={index} className="flex items-center bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded text-sm">
                       <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-300 hover:underline truncate max-w-xs">
                         {url}
                       </a>
@@ -355,17 +355,17 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
         />
       </div>
 
-      <div className="flex items极-center space-x-2">
+      <div className="flex items-center space-x-2">
         <Switch
           id="has-options"
           checked={hasOptions}
           onCheckedChange={setHasOptions}
         />
-        <Label htmlFor="has-options">Add multiple choice options极</Label>
-      </极div>
+        <Label htmlFor="has-options">Add multiple choice options</Label>
+      </div>
 
       {hasOptions && (
-        <div className="space-y-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-9极00">
+        <div className="space-y-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-900">
           <div>
             <Label className="font-semibold mb-2">Answer Type</Label>
             <RadioGroup
@@ -394,7 +394,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
           <div className="space-y-3">
             <Label className="font-semibold">Options (A-G)</Label>
             {Object.entries(options).map(([key, value]) => (
-              <div key={key} className="flex items-center space-x-3极 p-2 bg-white dark:bg-gray-800 rounded border">
+              <div key={key} className="flex items-center space-x-3 p-2 bg-white dark:bg-gray-800 rounded border">
                 {answerType === "single" ? (
                   <div className="flex items-center">
                     <input
@@ -405,7 +405,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
                       checked={correctAnswers.includes(key)}
                       onChange={() => handleAnswerSelection(key)}
                     />
-                 极 </div>
+                  </div>
                 ) : (
                   <Checkbox
                     id={`option-${key}`}
@@ -435,7 +435,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
               >
                 Add Option
               </Button>
-              <Button极
+              <Button
                 type="button"
                 variant="outline"
                 size="sm"
@@ -475,11 +475,11 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
         <MDEditor
           value={explanation}
           onChange={(value) => setExplanation(value || "")}
-          preview极="edit"
+          preview="edit"
           height={200}
           textareaProps={{
             placeholder: "Provide a detailed explanation",
-极          }}
+          }}
           data-color-mode="light"
           commands={[
             commands.undo,
@@ -493,7 +493,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
             commands.code,
             commands.group,
             commands.unorderedListCommand,
-            commands极.orderedListCommand,
+            commands.orderedListCommand,
             commands.checkedListCommand,
             commands.group,
             createImageUploadCommand(setExplanation, explanation),
