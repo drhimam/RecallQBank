@@ -8,7 +8,7 @@ import NotFound from "./pages/NotFound";
 import Qbank from "./pages/Qbank";
 import SubmitQuestion from "./pages/SubmitQuestion";
 import MyContributions from "./pages/MyContributions";
-import AdminDashboard from "./pages/AdminDashboard";
+import ModeratorDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import { Navbar } from "./components/Navbar";
@@ -27,7 +27,7 @@ const App = () => (
           <Route path="/qbank" element={<Qbank />} />
           <Route path="/submit" element={<SubmitQuestion />} />
           <Route path="/my-contributions" element={<MyContributions />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/moderator" element={<ModeratorDashboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/login" element={<Login />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

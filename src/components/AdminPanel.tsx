@@ -5,7 +5,7 @@ export const AdminPanel = () => {
       <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 mb-2">
         <li>Approve or reject submitted questions</li>
         <li>View flagged/duplicate questions</li>
-        <li>Manage user roles (admin, co-admin, contributor)</li>
+        <li>Manage user roles (moderator, co-moderator, contributor)</li>
       </ul>
       <div className="text-sm text-gray-500">* Full functionality coming soon.</div>
     </div>
