@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { AISettingsModal } from "./AISettingsModal";
 
 interface AIGenerationButtonProps {
   onContentGenerated: (content: string) => void;
@@ -17,13 +18,17 @@ export const AIGenerationButton = ({
   disabled = false 
 }: AIGenerationButtonProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [aiSettings, setAiSettings] = useState({
+    provider: localStorage.getItem('aiProvider') || 'deepseek',
+    apiKey: localStorage.getItem('aiApiKey') || ''
+  });
   const { toast } = useToast();
 
   const generateContent = async () => {
-    if (!process.env.NEXT_PUBLIC_AI_API_KEY) {
+    if (!aiSettings.apiKey) {
       toast({
-        title: "AI API not configured",
-        description: "Please configure the AI API key in environment variables",
+        title: "API Key required",
+        description: "Please configure your AI settings first",
         variant: "destructive",
       });
       return;
@@ -36,15 +41,28 @@ export const AIGenerationButton = ({
         ? `Generate medical exam question content about: ${context}`
         : "Generate a medical exam question with explanation";
 
-      const response = await fetch('/api/ai/generate', {
+      // Map providers to their respective API endpoints
+      const providerEndpoints = {
+        deepseek: 'https://api.deepseek.com/v1/chat/completions',
+        openai: 'https://api.openai.com/v1/chat/completions',
+        anthropic: 'https://api.anthropic.com/v1/messages',
+        gemini: 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent'
+      };
+
+      const endpoint = providerEndpoints[aiSettings.provider as keyof typeof providerEndpoints];
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_AI_API_KEY}`
+          'Authorization': `Bearer ${aiSettings.apiKey}`
         },
         body: JSON.stringify({
-          prompt,
-          provider: process.env.NEXT_PUBLIC_AI_PROVIDER || 'deepseek',
+          model: aiSettings.provider === 'deepseek' ? 'deepseek-chat' : 
+                 aiSettings.provider === 'openai' ? 'gpt-4' :
+                 aiSettings.provider === 'anthropic' ? 'claude-3-sonnet-20240229' :
+                 'gemini-pro',
+          messages: [{ role: 'user', content: prompt }],
           max_tokens: 500
         })
       });
@@ -54,7 +72,18 @@ export const AIGenerationButton = ({
       }
 
       const data = await response.json();
-      onContentGenerated(data.content);
+      
+      // Extract content based on provider response format
+      let generatedContent = '';
+      if (aiSettings.provider === 'deepseek' || aiSettings.provider === 'openai') {
+        generatedContent = data.choices[0]?.message?.content || '';
+      } else if (aiSettings.provider === 'anthropic') {
+        generatedContent = data.content[0]?.text || '';
+      } else if (aiSettings.provider === 'gemini') {
+        generatedContent = data.candidates[0]?.content?.parts[0]?.text || '';
+      }
+
+      onContentGenerated(generatedContent);
       
       toast({
         title: "Content generated",
@@ -63,7 +92,7 @@ export const AIGenerationButton = ({
     } catch (error) {
       toast({
         title: "Generation failed",
-        description: "Failed to generate content. Please try again.",
+        description: "Failed to generate content. Please check your API key and try again.",
         variant: "destructive",
       });
     } finally {
@@ -71,21 +100,28 @@ export const AIGenerationButton = ({
     }
   };
 
+  const handleSettingsSave = (settings: { provider: string; apiKey: string }) => {
+    setAiSettings(settings);
+  };
+
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={generateContent}
-      disabled={disabled || isGenerating}
-      className="flex items-center gap-2"
-    >
-      {isGenerating ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        <Sparkles className="w-4 h-4" />
-      )}
-      AI Generate
-    </Button>
+    <div className="flex items-center gap-2">
+      <AISettingsModal onSettingsSave={handleSettingsSave} />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={generateContent}
+        disabled={disabled || isGenerating || !aiSettings.apiKey}
+        className="flex items-center gap-2"
+      >
+        {isGenerating ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Sparkles className="w-4 h-4" />
+        )}
+        AI Generate
+      </Button>
+    </div>
   );
 };
