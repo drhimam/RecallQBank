@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import MDEditor, { commands } from "@uiw/react-md-editor";
 
 type QuestionFormProps = {
   onSubmit?: (data: any) => void;
@@ -20,6 +20,7 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
     C: "",
     D: "",
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleOptionChange = (key: string, value: string) => {
     setOptions(prev => ({ ...prev, [key]: value }));
@@ -40,6 +41,35 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
       delete newOptions[keys[keys.length - 1]];
       setOptions(newOptions);
     }
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, setValue: (value: string) => void, currentValue: string) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageDataUrl = e.target?.result as string;
+        const markdownImage = `![${file.name}](${imageDataUrl})`;
+        setValue(currentValue + markdownImage);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const createImageUploadCommand = (setValue: (value: string) => void, currentValue: string) => {
+    return {
+      name: "image-upload",
+      keyCommand: "imageUpload",
+      buttonProps: { "aria-label": "Insert image from device" },
+      icon: (
+        <svg width="12" height="12" viewBox="0 0 20 20">
+          <path fill="currentColor" d="M15 9c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm4-7H1c-.55 0-1 .45-1 1v14c0 .55.45 1 1 1h18c.55 0 1-.45 1-1V3c0-.55-.45-1-1-1zm-1 13H2V4h16v11zm-6-1l-3-3-3 3-4-4v11h16V9l-4 4z"/>
+        </svg>
+      ),
+      execute: () => {
+        fileInputRef.current?.click();
+      },
+    };
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -65,14 +95,29 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={(e) => handleImageUpload(e, setQuestion, question)}
+      />
+      
       <div>
         <label className="block font-medium mb-1">Question</label>
-        <Textarea
+        <MDEditor
           value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Enter the recall exam question"
-          required
-          className="min-h-[120px]"
+          onChange={(value) => setQuestion(value || "")}
+          preview="edit"
+          height={200}
+          textareaProps={{
+            placeholder: "Enter the recall exam question",
+          }}
+          data-color-mode="light"
+          commands={[
+            ...commands.getCommands(),
+            createImageUploadCommand(setQuestion, question),
+          ]}
         />
       </div>
 
@@ -123,21 +168,36 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
 
       <div>
         <label className="block font-medium mb-1">Explanation</label>
-        <Textarea
+        <MDEditor
           value={explanation}
-          onChange={(e) => setExplanation(e.target.value)}
-          placeholder="Provide a detailed explanation"
-          required
-          className="min-h-[120px]"
+          onChange={(value) => setExplanation(value || "")}
+          preview="edit"
+          height={200}
+          textareaProps={{
+            placeholder: "Provide a detailed explanation",
+          }}
+          data-color-mode="light"
+          commands={[
+            ...commands.getCommands(),
+            createImageUploadCommand(setExplanation, explanation),
+          ]}
         />
       </div>
       <div>
         <label className="block font-medium mb-1">Discussion</label>
-        <Textarea
+        <MDEditor
           value={discussion}
-          onChange={(e) => setDiscussion(e.target.value)}
-          placeholder="Write related topic discussion"
-          className="min-h-[100px]"
+          onChange={(value) => setDiscussion(value || "")}
+          preview="edit"
+          height={150}
+          textareaProps={{
+            placeholder: "Write related topic discussion",
+          }}
+          data-color-mode="light"
+          commands={[
+            ...commands.getCommands(),
+            createImageUploadCommand(setDiscussion, discussion),
+          ]}
         />
       </div>
       <Button type="submit" className="w-full">
