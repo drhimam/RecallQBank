@@ -2,7 +2,6 @@ import { useState } from "react";
 import { QuestionForm } from "@/components/QuestionForm";
 import { CategorySelector } from "@/components/CategorySelector";
 import { DuplicateChecker } from "@/components/DuplicateChecker";
-import { QuestionCard } from "@/components/QuestionCard";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Edit, Trash2, Eye } from "lucide-react";
@@ -130,14 +129,6 @@ const SubmitQuestion = () => {
             
             {viewMode === "edit" && (
               <div className="mb-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancelEdit}
-                  className="mb-2"
-                >
-                  Cancel Edit
-                </Button>
                 <p className="text-sm text-gray-500">
                   Editing question ID: {editingQuestion?.id}
                 </p>
@@ -155,6 +146,7 @@ const SubmitQuestion = () => {
               onSubmit={handleSubmit}
               isModerator={localStorage.getItem('userRole') === 'moderator'}
               initialData={editingQuestion}
+              onClear={handleCancelEdit}
             />
           </div>
         </div>

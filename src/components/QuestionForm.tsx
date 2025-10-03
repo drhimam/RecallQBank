@@ -12,11 +12,12 @@ type QuestionFormProps = {
   onSubmit?: (data: any) => void;
   isModerator?: boolean;
   initialData?: any;
+  onClear?: () => void;
 };
 
 type AnswerType = "single" | "multiple";
 
-export const QuestionForm = ({ onSubmit, isModerator = false, initialData }: QuestionFormProps) => {
+export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onClear }: QuestionFormProps) => {
   const [question, setQuestion] = useState<string>("");
   const [explanation, setExplanation] = useState<string>("");
   const [discussion, setDiscussion] = useState<string>("");
@@ -44,6 +45,9 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData }: Que
         setCorrectAnswers(initialData.correctAnswers || []);
         setAnswerType(initialData.answerType || "single");
       }
+    } else {
+      // Reset form when not editing
+      resetForm();
     }
   }, [initialData]);
 
@@ -126,18 +130,29 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData }: Que
     
     // Only reset form if not editing
     if (!initialData) {
-      setQuestion("");
-      setExplanation("");
-      setDiscussion("");
-      setOptions({
-        A: "",
-        B: "",
-        C: "",
-        D: "",
-      });
-      setCorrectAnswers([]);
-      setAnswerType("single");
-      setHasOptions(false);
+      resetForm();
+    }
+  };
+
+  const resetForm = () => {
+    setQuestion("");
+    setExplanation("");
+    setDiscussion("");
+    setOptions({
+      A: "",
+      B: "",
+      C: "",
+      D: "",
+    });
+    setCorrectAnswers([]);
+    setAnswerType("single");
+    setHasOptions(false);
+  };
+
+  const handleClear = () => {
+    resetForm();
+    if (onClear) {
+      onClear();
     }
   };
 
@@ -375,9 +390,22 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData }: Que
         />
       </div>
       
-      <Button type="submit" className="w-full">
-        {initialData ? "Update Question" : "Submit Question"}
-      </Button>
+      <div className="flex space-x-2">
+        <Button type="submit" className="flex-1">
+          {initialData ? "Update Question" : "Submit Question"}
+        </Button>
+        {initialData ? (
+          <Button type="button" variant="outline" onClick={() => {
+            if (onClear) onClear();
+          }}>
+            Cancel Edit
+          </Button>
+        ) : (
+          <Button type="button" variant="outline" onClick={handleClear}>
+            Clear Form
+          </Button>
+        )}
+      </div>
     </form>
   );
 };
