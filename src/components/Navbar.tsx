@@ -7,7 +7,6 @@ const navLinks = [
   { to: "/", label: "Home" },
   { to: "/qbank", label: "Qbank" },
   { to: "/submit", label: "Submit Question" },
-  { to: "/my-contributions", label: "My Contributions" },
   { to: "/moderator", label: "Moderator Dashboard" },
   { to: "/profile", label: "Profile" },
   { to: "/login", label: "Login" },
