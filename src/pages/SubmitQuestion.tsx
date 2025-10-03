@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { QuestionForm } from "@/components/QuestionForm";
 import { CategorySelector } from "@/components/CategorySelector";
 import { DuplicateChecker } from "@/components/DuplicateChecker";
@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Edit, Trash2, Eye, Plus, BarChart3, FileText, CheckCircle, Clock } from "lucide-react";
+import { Edit, Trash2, Eye, Plus, BarChart3, FileText, CheckCircle, Clock, Search, Download, Upload, FileJson, FileSpreadsheet } from "lucide-react";
 import { Footer } from "@/components/Footer";
 
 const SubmitQuestion = () => {
@@ -16,6 +17,8 @@ const SubmitQuestion = () => {
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [viewMode, setViewMode] = useState<"create" | "edit">("create");
+  const [searchTerm, setSearchTerm] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Mock user contributions data
   const [userContributions, setUserContributions] = useState([
@@ -44,6 +47,18 @@ const SubmitQuestion = () => {
       status: "pending"
     }
   ]);
+
+  // Filter contributions based on search term
+  const filteredContributions = userContributions.filter(contribution => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      contribution.question.toLowerCase().includes(searchLower) ||
+      contribution.exam.toLowerCase().includes(searchLower) ||
+      contribution.subject.toLowerCase().includes(searchLower) ||
+      contribution.topics.some(topic => topic.toLowerCase().includes(searchLower)) ||
+      contribution.tags.some(tag => tag.toLowerCase().includes(searchLower))
+    );
+  });
 
   const handleSubmit = (data: any) => {
     // Validate that correct answers are selected if options are provided
@@ -111,6 +126,120 @@ const SubmitQuestion = () => {
     setViewMode("create");
     setCategories({});
     setIsDuplicate(false);
+  };
+
+  // Export functions
+  const exportToJSON = () => {
+    const dataStr = JSON.stringify(userContributions, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = 'contributions.json';
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    toast.success("Exported to JSON successfully!");
+  };
+
+  const exportToMarkdown = () => {
+    let markdownContent = "# My Question Contributions\n\n";
+    userContributions.forEach((q, index) => {
+      markdownContent += `## Question ${index + 1}\n\n`;
+      markdownContent += `**Question:** ${q.question}\n\n`;
+      if (q.options) {
+        markdownContent += `**Options:**\n`;
+        Object.entries(q.options).forEach(([key, value]) => {
+          markdownContent += `- ${key}. ${value}\n`;
+        });
+        markdownContent += `\n`;
+      }
+      if (q.answer) {
+        markdownContent += `**Answer:** ${q.answer}\n\n`;
+      }
+      if (q.explanation) {
+        markdownContent += `**Explanation:** ${q.explanation}\n\n`;
+      }
+      markdownContent += `**Exam:** ${q.exam}\n\n`;
+      markdownContent += `**Subject:** ${q.subject}\n\n`;
+      if (q.topics && q.topics.length > 0) {
+        markdownContent += `**Topics:** ${q.topics.join(", ")}\n\n`;
+      }
+      if (q.tags && q.tags.length > 0) {
+        markdownContent += `**Tags:** ${q.tags.join(", ")}\n\n`;
+      }
+      markdownContent += `**Status:** ${q.status}\n\n`;
+      markdownContent += `---\n\n`;
+    });
+    
+    const dataUri = 'data:text/markdown;charset=utf-8,'+ encodeURIComponent(markdownContent);
+    const exportFileDefaultName = 'contributions.md';
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    toast.success("Exported to Markdown successfully!");
+  };
+
+  const exportToExcel = () => {
+    // Simple CSV export for now
+    let csvContent = "Question,Options,Answer,Explanation,Exam,Subject,Topics,Tags,Status\n";
+    userContributions.forEach(q => {
+      const options = q.options ? Object.entries(q.options).map(([k, v]) => `${k}. ${v}`).join("; ") : "";
+      const topics = q.topics ? q.topics.join("; ") : "";
+      const tags = q.tags ? q.tags.join("; ") : "";
+      csvContent += `"${q.question}","${options}","${q.answer || ''}","${q.explanation || ''}","${q.exam}","${q.subject}","${topics}","${tags}","${q.status}"\n`;
+    });
+    
+    const dataUri = 'data:text/csv;charset=utf-8,'+ encodeURIComponent(csvContent);
+    const exportFileDefaultName = 'contributions.csv';
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    toast.success("Exported to CSV successfully!");
+  };
+
+  const exportToPDF = () => {
+    // In a real app, this would generate a PDF
+    // For now, we'll just show a toast
+    toast.info("PDF export would be implemented with a library like jsPDF in a real application");
+  };
+
+  // Import functions
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        if (file.name.endsWith('.json')) {
+          const jsonData = JSON.parse(content);
+          if (Array.isArray(jsonData)) {
+            // Add imported questions to existing ones
+            setUserContributions(prev => [...prev, ...jsonData.map((q: any) => ({
+              ...q,
+              id: Date.now() + Math.random() // Generate new IDs
+            }))]);
+            toast.success(`Imported ${jsonData.length} questions from JSON`);
+          } else {
+            toast.error("Invalid JSON format");
+          }
+        } else if (file.name.endsWith('.csv') || file.name.endsWith('.xlsx')) {
+          // For CSV/Excel, we'd need a proper parser
+          toast.info("Excel/CSV import would be implemented with a library like xlsx in a real application");
+        }
+      } catch (error) {
+        toast.error("Error parsing file");
+      }
+    };
+    reader.readAsText(file);
+    // Reset file input
+    event.target.value = '';
   };
 
   // Calculate stats
@@ -242,15 +371,62 @@ const SubmitQuestion = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {userContributions.length === 0 ? (
+                {/* Search and Actions Bar */}
+                <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search questions, topics, tags..."
+                      className="pl-8"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" onClick={exportToJSON}>
+                      <FileJson className="w-4 h-4 mr-1" />
+                      JSON
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={exportToMarkdown}>
+                      <Download className="w-4 h-4 mr-1" />
+                      MD
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={exportToExcel}>
+                      <FileSpreadsheet className="w-4 h-4 mr-1" />
+                      Excel
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={exportToPDF}>
+                      PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleImportClick}>
+                      <Upload className="w-4 h-4 mr-1" />
+                      Import
+                    </Button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      style={{ display: 'none' }}
+                      accept=".json,.csv,.xlsx"
+                      onChange={handleFileImport}
+                    />
+                  </div>
+                </div>
+
+                {filteredContributions.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
                     <Eye className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg font-medium mb-2">No questions submitted yet</p>
-                    <p className="text-sm">Your submitted questions will appear here</p>
+                    <p className="text-lg font-medium mb-2">
+                      {searchTerm ? "No matching questions found" : "No questions submitted yet"}
+                    </p>
+                    <p className="text-sm">
+                      {searchTerm 
+                        ? "Try adjusting your search terms" 
+                        : "Your submitted questions will appear here"}
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {userContributions.map((question) => (
+                    {filteredContributions.map((question) => (
                       <Card key={question.id} className="bg-gray-50 dark:bg-gray-800 border-0">
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start mb-3">
@@ -284,6 +460,16 @@ const SubmitQuestion = () => {
                             {question.subject && (
                               <Badge variant="outline">{question.subject}</Badge>
                             )}
+                            {question.topics?.map((topic, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {topic}
+                              </Badge>
+                            ))}
+                            {question.tags?.map((tag, idx) => (
+                              <Badge key={idx} variant="default" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
                           </div>
                           
                           <div className="flex items-center justify-between text-xs">
