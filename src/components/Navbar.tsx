@@ -16,7 +16,7 @@ export const Navbar = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="text-xl font-bold text-blue-600">
           recallQbank
