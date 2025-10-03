@@ -306,35 +306,6 @@ const SubmitQuestion = () => {
                 )}
               </CardContent>
             </Card>
-
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Submission Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
-                      {totalQuestions}
-                    </div>
-                    <div className="text-sm text-blue-600 dark:text-blue-300">Total</div>
-                  </div>
-                  <div className="text-center p-3 bg-green-50 dark:bg-green-900 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-300">
-                      {approvedQuestions}
-                    </div>
-                    <div className="text-sm text-green-600 dark:text-green-300">Approved</div>
-                  </div>
-                  <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
-                    <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-300">
-                      {pendingQuestions}
-                    </div>
-                    <div className="text-sm text-yellow-600 dark:text-yellow-300">Pending</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
 
