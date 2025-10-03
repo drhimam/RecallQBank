@@ -3,6 +3,7 @@ import { ProgressTracker } from "@/components/ProgressTracker";
 import { DiscussionThread } from "@/components/DiscussionThread";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Footer } from "@/components/Footer";
 
 const exampleQuestions = [
   {
@@ -38,47 +39,50 @@ const Qbank = () => {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-3xl font-bold">Qbank</h1>
-        <div className="flex gap-2">
-          <button
-            className={`px-4 py-2 rounded ${mode === "study" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-            onClick={() => setMode("study")}
-          >
-            Study Mode
-          </button>
-          <button
-            className={`px-4 py-2 rounded ${mode === "test" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-            onClick={() => setMode("test")}
-          >
-            Test Mode
-          </button>
-        </div>
-      </div>
-      <ProgressTracker current={answered.length} total={exampleQuestions.length} />
-      <p className="text-gray-600 mb-4">
-        Browse, study, or test yourself with contributed questions.
-      </p>
-      <div>
-        {exampleQuestions.map((q, i) => (
-          <div key={i} className="mb-8">
-            <QuestionCard {...q} />
-            <div className="flex gap-2 mb-2">
-              <Button
-                size="sm"
-                variant={answered.includes(i) ? "secondary" : "default"}
-                disabled={answered.includes(i)}
-                onClick={() => handleMarkAnswered(i)}
-              >
-                {answered.includes(i) ? "Answered" : "Mark as Answered"}
-              </Button>
-            </div>
-            <DiscussionThread />
+    <div className="min-h-screen flex flex-col">
+      <div className="container mx-auto py-8 flex-1">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold">Qbank</h1>
+          <div className="flex gap-2">
+            <button
+              className={`px-4 py-2 rounded ${mode === "study" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+              onClick={() => setMode("study")}
+            >
+              Study Mode
+            </button>
+            <button
+              className={`px-4 py-2 rounded ${mode === "test" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+              onClick={() => setMode("test")}
+            >
+              Test Mode
+            </button>
           </div>
-        ))}
+        </div>
+        <ProgressTracker current={answered.length} total={exampleQuestions.length} />
+        <p className="text-gray-600 mb-4">
+          Browse, study, or test yourself with contributed questions.
+        </p>
+        <div>
+          {exampleQuestions.map((q, i) => (
+            <div key={i} className="mb-8">
+              <QuestionCard {...q} />
+              <div className="flex gap-2 mb-2">
+                <Button
+                  size="sm"
+                  variant={answered.includes(i) ? "secondary" : "default"}
+                  disabled={answered.includes(i)}
+                  onClick={() => handleMarkAnswered(i)}
+                >
+                  {answered.includes(i) ? "Answered" : "Mark as Answered"}
+                </Button>
+              </div>
+              <DiscussionThread />
+            </div>
+          ))}
+        </div>
+        {/* In the future, add pagination, filters, and real data */}
       </div>
-      {/* In the future, add pagination, filters, and real data */}
+      <Footer />
     </div>
   );
 };
