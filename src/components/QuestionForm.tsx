@@ -14,7 +14,6 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
   const [explanation, setExplanation] = useState<string>("");
   const [discussion, setDiscussion] = useState<string>("");
   const [topics, setTopics] = useState("");
-  const [tags, setTags] = useState("");
   const [hasOptions, setHasOptions] = useState(false);
   const [options, setOptions] = useState<Record<string, string>>({
     A: "",
@@ -52,7 +51,6 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
         explanation,
         discussion,
         topics: topics.split(",").map((t) => t.trim()).filter(Boolean),
-        tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         options: hasOptions ? options : undefined,
       });
     }
@@ -60,7 +58,6 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
     setExplanation("");
     setDiscussion("");
     setTopics("");
-    setTags("");
     setOptions({
       A: "",
       B: "",
@@ -167,14 +164,6 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
           value={topics}
           onChange={(e) => setTopics(e.target.value)}
           placeholder="e.g. Cardiology, Arrhythmia"
-        />
-      </div>
-      <div>
-        <label className="block font-medium mb-1">Tags (comma separated)</label>
-        <Input
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          placeholder="e.g. ECG, Emergency"
         />
       </div>
       <Button type="submit" className="w-full">
