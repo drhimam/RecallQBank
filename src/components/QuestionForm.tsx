@@ -115,7 +115,20 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
           }}
           data-color-mode="light"
           commands={[
-            ...commands.getCommands(),
+            commands.undo,
+            commands.redo,
+            commands.group,
+            commands.bold,
+            commands.italic,
+            commands.group,
+            commands.link,
+            commands.quote,
+            commands.code,
+            commands.group,
+            commands.unorderedListCommand,
+            commands.orderedListCommand,
+            commands.checkedListCommand,
+            commands.group,
             createImageUploadCommand(setQuestion, question),
           ]}
         />
@@ -178,7 +191,20 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
           }}
           data-color-mode="light"
           commands={[
-            ...commands.getCommands(),
+            commands.undo,
+            commands.redo,
+            commands.group,
+            commands.bold,
+            commands.italic,
+            commands.group,
+            commands.link,
+            commands.quote,
+            commands.code,
+            commands.group,
+            commands.unorderedListCommand,
+            commands.orderedListCommand,
+            commands.checkedListCommand,
+            commands.group,
             createImageUploadCommand(setExplanation, explanation),
           ]}
         />
@@ -195,7 +221,20 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
           }}
           data-color-mode="light"
           commands={[
-            ...commands.getCommands(),
+            commands.undo,
+            commands.redo,
+            commands.group,
+            commands.bold,
+            commands.italic,
+            commands.group,
+            commands.link,
+            commands.quote,
+            commands.code,
+            commands.group,
+            commands.unorderedListCommand,
+            commands.orderedListCommand,
+            commands.checkedListCommand,
+            commands.group,
             createImageUploadCommand(setDiscussion, discussion),
           ]}
         />
