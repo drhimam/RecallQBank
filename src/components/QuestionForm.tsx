@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import MDEditor from "@uiw/react-md-editor";
+import { Textarea } from "@/components/ui/textarea";
 
 type QuestionFormProps = {
   onSubmit?: (data: any) => void;
@@ -67,18 +67,13 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div>
         <label className="block font-medium mb-1">Question</label>
-        <div data-color-mode="light">
-          <MDEditor
-            value={question}
-            onChange={setQuestion}
-            height={120}
-            preview="edit"
-            textareaProps={{
-              placeholder: "Enter the recall exam question (Markdown supported)",
-              required: true,
-            }}
-          />
-        </div>
+        <Textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Enter the recall exam question"
+          required
+          className="min-h-[120px]"
+        />
       </div>
 
       <div className="flex items-center space-x-2">
@@ -128,32 +123,22 @@ export const QuestionForm = ({ onSubmit }: QuestionFormProps) => {
 
       <div>
         <label className="block font-medium mb-1">Explanation</label>
-        <div data-color-mode="light">
-          <MDEditor
-            value={explanation}
-            onChange={setExplanation}
-            height={120}
-            preview="edit"
-            textareaProps={{
-              placeholder: "Provide a detailed explanation (Markdown supported)",
-              required: true,
-            }}
-          />
-        </div>
+        <Textarea
+          value={explanation}
+          onChange={(e) => setExplanation(e.target.value)}
+          placeholder="Provide a detailed explanation"
+          required
+          className="min-h-[120px]"
+        />
       </div>
       <div>
         <label className="block font-medium mb-1">Discussion</label>
-        <div data-color-mode="light">
-          <MDEditor
-            value={discussion}
-            onChange={setDiscussion}
-            height={100}
-            preview="edit"
-            textareaProps={{
-              placeholder: "Write related topic discussion (Markdown supported)",
-            }}
-          />
-        </div>
+        <Textarea
+          value={discussion}
+          onChange={(e) => setDiscussion(e.target.value)}
+          placeholder="Write related topic discussion"
+          className="min-h-[100px]"
+        />
       </div>
       <Button type="submit" className="w-full">
         Submit Question
