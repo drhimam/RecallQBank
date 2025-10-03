@@ -19,6 +19,7 @@ const SubmitQuestion = () => {
     setSubmitted(true);
     toast.success("Question submitted! Awaiting admin approval.");
     // In the future, send to backend
+    // data + categories can be sent together
   };
 
   return (
@@ -40,7 +41,9 @@ const SubmitQuestion = () => {
               "Which of the following is NOT a feature of nephrotic syndrome?",
             ]}
           />
-          <QuestionForm onSubmit={handleSubmit} />
+          <QuestionForm
+            onSubmit={(data) => handleSubmit({ ...data, ...categories })}
+          />
         </>
       )}
     </div>

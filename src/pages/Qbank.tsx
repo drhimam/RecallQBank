@@ -2,6 +2,7 @@ import { QuestionCard } from "@/components/QuestionCard";
 import { ProgressTracker } from "@/components/ProgressTracker";
 import { DiscussionThread } from "@/components/DiscussionThread";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 const exampleQuestions = [
   {
@@ -28,7 +29,13 @@ const exampleQuestions = [
 
 const Qbank = () => {
   const [mode, setMode] = useState<"study" | "test">("study");
-  const [answered, setAnswered] = useState(1);
+  const [answered, setAnswered] = useState<number[]>([0]); // indices of answered questions
+
+  const handleMarkAnswered = (idx: number) => {
+    if (!answered.includes(idx)) {
+      setAnswered((prev) => [...prev, idx]);
+    }
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -49,14 +56,24 @@ const Qbank = () => {
           </button>
         </div>
       </div>
-      <ProgressTracker current={answered} total={exampleQuestions.length} />
+      <ProgressTracker current={answered.length} total={exampleQuestions.length} />
       <p className="text-gray-600 mb-4">
         Browse, study, or test yourself with contributed questions.
       </p>
       <div>
         {exampleQuestions.map((q, i) => (
-          <div key={i}>
+          <div key={i} className="mb-8">
             <QuestionCard {...q} />
+            <div className="flex gap-2 mb-2">
+              <Button
+                size="sm"
+                variant={answered.includes(i) ? "secondary" : "default"}
+                disabled={answered.includes(i)}
+                onClick={() => handleMarkAnswered(i)}
+              >
+                {answered.includes(i) ? "Answered" : "Mark as Answered"}
+              </Button>
+            </div>
             <DiscussionThread />
           </div>
         ))}

@@ -5,7 +5,11 @@ const MyContributions = () => {
       <p className="text-gray-600 mb-4">
         View and manage the questions you have submitted.
       </p>
-      {/* List of user's submitted questions will go here */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
+        <div className="text-gray-500 text-center">
+          (Your submitted questions will appear here.)
+        </div>
+      </div>
     </div>
   );
 };

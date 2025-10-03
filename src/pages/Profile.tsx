@@ -5,7 +5,11 @@ const Profile = () => {
       <p className="text-gray-600 mb-4">
         Manage your account and settings.
       </p>
-      {/* Profile details and settings will go here */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
+        <div className="text-gray-500 text-center">
+          (Profile details and settings will appear here.)
+        </div>
+      </div>
     </div>
   );
 };
