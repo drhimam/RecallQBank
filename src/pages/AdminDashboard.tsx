@@ -1,3 +1,5 @@
+import { AdminPanel } from "@/components/AdminPanel";
+
 const AdminDashboard = () => {
   return (
     <div className="container mx-auto py-8">
@@ -5,7 +7,7 @@ const AdminDashboard = () => {
       <p className="text-gray-600 mb-4">
         Review and approve submitted questions.
       </p>
-      {/* Admin moderation tools will go here */}
+      <AdminPanel />
     </div>
   );
 };

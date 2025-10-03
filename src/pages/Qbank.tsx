@@ -1,4 +1,6 @@
 import { QuestionCard } from "@/components/QuestionCard";
+import { ProgressTracker } from "@/components/ProgressTracker";
+import { DiscussionThread } from "@/components/DiscussionThread";
 import { useState } from "react";
 
 const exampleQuestions = [
@@ -26,6 +28,7 @@ const exampleQuestions = [
 
 const Qbank = () => {
   const [mode, setMode] = useState<"study" | "test">("study");
+  const [answered, setAnswered] = useState(1);
 
   return (
     <div className="container mx-auto py-8">
@@ -46,12 +49,16 @@ const Qbank = () => {
           </button>
         </div>
       </div>
+      <ProgressTracker current={answered} total={exampleQuestions.length} />
       <p className="text-gray-600 mb-4">
         Browse, study, or test yourself with contributed questions.
       </p>
       <div>
         {exampleQuestions.map((q, i) => (
-          <QuestionCard key={i} {...q} />
+          <div key={i}>
+            <QuestionCard {...q} />
+            <DiscussionThread />
+          </div>
         ))}
       </div>
       {/* In the future, add pagination, filters, and real data */}

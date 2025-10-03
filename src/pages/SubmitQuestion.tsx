@@ -1,11 +1,21 @@
 import { useState } from "react";
 import { QuestionForm } from "@/components/QuestionForm";
+import { CategorySelector } from "@/components/CategorySelector";
+import { DuplicateChecker } from "@/components/DuplicateChecker";
 import { toast } from "sonner";
 
 const SubmitQuestion = () => {
   const [submitted, setSubmitted] = useState(false);
+  const [categories, setCategories] = useState<any>({});
+  const [isDuplicate, setIsDuplicate] = useState(false);
 
   const handleSubmit = (data: any) => {
+    // Simulate duplicate check
+    if (data.question.toLowerCase().includes("nephrotic")) {
+      setIsDuplicate(true);
+      toast.error("Possible duplicate detected!");
+      return;
+    }
     setSubmitted(true);
     toast.success("Question submitted! Awaiting admin approval.");
     // In the future, send to backend
@@ -22,7 +32,16 @@ const SubmitQuestion = () => {
           Thank you for your contribution! Your question is pending review.
         </div>
       ) : (
-        <QuestionForm onSubmit={handleSubmit} />
+        <>
+          <CategorySelector onChange={setCategories} />
+          <DuplicateChecker
+            isDuplicate={isDuplicate}
+            similarQuestions={[
+              "Which of the following is NOT a feature of nephrotic syndrome?",
+            ]}
+          />
+          <QuestionForm onSubmit={handleSubmit} />
+        </>
       )}
     </div>
   );
