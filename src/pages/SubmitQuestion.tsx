@@ -3,8 +3,11 @@ import { QuestionForm } from "@/components/QuestionForm";
 import { CategorySelector } from "@/components/CategorySelector";
 import { DuplicateChecker } from "@/components/DuplicateChecker";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Edit, Trash2, Eye } from "lucide-react";
+import { Edit, Trash2, Eye, Plus, BarChart3, FileText, CheckCircle, Clock } from "lucide-react";
 
 const SubmitQuestion = () => {
   const [submitted, setSubmitted] = useState(false);
@@ -79,12 +82,8 @@ const SubmitQuestion = () => {
       toast.success("Question submitted! Awaiting admin approval.");
     }
     
-    // Log the submitted data structure
-    console.log("Submitted question:", {
-      ...data,
-      ...categories,
-      correctAnswers: data.correctAnswers || []
-    });
+    // Reset duplicate state
+    setIsDuplicate(false);
   };
 
   const handleEdit = (question: any) => {
@@ -110,131 +109,239 @@ const SubmitQuestion = () => {
     setEditingQuestion(null);
     setViewMode("create");
     setCategories({});
+    setIsDuplicate(false);
   };
 
+  // Calculate stats
+  const totalQuestions = userContributions.length;
+  const approvedQuestions = userContributions.filter(q => q.status === "approved").length;
+  const pendingQuestions = userContributions.filter(q => q.status === "pending").length;
+  const approvalRate = totalQuestions > 0 ? Math.round((approvedQuestions / totalQuestions) * 100) : 0;
+
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-4">Submit & Manage Questions</h1>
-      <p className="text-gray-600 mb-6">
-        Create new questions and manage your existing contributions in one place.
-      </p>
+    <div className="container mx-auto py-8 px-4">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          Submit & Manage Questions
+        </h1>
+        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+          Contribute to our medical question bank and track your submissions in one convenient place
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Stats Cards */}
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-6 h-6" />
+              Contribution Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-white dark:bg-blue-800 rounded-lg shadow-sm">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-200">
+                  {totalQuestions}
+                </div>
+                <div className="text-sm text-blue-600 dark:text-blue-200">Total Questions</div>
+              </div>
+              <div className="text-center p-4 bg-white dark:bg-blue-800 rounded-lg shadow-sm">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-200">
+                  {approvedQuestions}
+                </div>
+                <div className="text-sm text-green-600 dark:text-green-200">Approved</div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300 mb-1">
+                <span>Approval Rate</span>
+                <span>{approvalRate}%</span>
+              </div>
+              <Progress value={approvalRate} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-6 h-6" />
+              Quick Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <Button className="w-full" size="lg" onClick={() => window.scrollTo(0, 0)}>
+                <Plus className="w-5 h-5 mr-2" />
+                Create New Question
+              </Button>
+              <Button variant="outline" className="w-full" size="lg">
+                View All Questions
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Panel: Submit/Edit Form */}
         <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">
-              {viewMode === "edit" ? "Edit Question" : "Submit New Question"}
-            </h2>
-            
-            {viewMode === "edit" && (
-              <div className="mb-4">
-                <p className="text-sm text-gray-500">
-                  Editing question ID: {editingQuestion?.id}
-                </p>
-              </div>
-            )}
-
-            <CategorySelector onChange={setCategories} />
-            <DuplicateChecker
-              isDuplicate={isDuplicate}
-              similarQuestions={[
-                "Which of the following is NOT a feature of nephrotic syndrome?",
-              ]}
-            />
-            <QuestionForm
-              onSubmit={handleSubmit}
-              isModerator={localStorage.getItem('userRole') === 'moderator'}
-              initialData={editingQuestion}
-              onClear={handleCancelEdit}
-            />
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {viewMode === "edit" ? (
+                  <>
+                    <Edit className="w-6 h-6" />
+                    Edit Question
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-6 h-6" />
+                    Submit New Question
+                  </>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {viewMode === "edit" 
+                  ? `Editing question ID: ${editingQuestion?.id}`
+                  : "Fill out the form below to contribute a new medical question"
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <CategorySelector onChange={setCategories} />
+              <DuplicateChecker
+                isDuplicate={isDuplicate}
+                similarQuestions={[
+                  "Which of the following is NOT a feature of nephrotic syndrome?",
+                ]}
+              />
+              <QuestionForm
+                onSubmit={handleSubmit}
+                isModerator={localStorage.getItem('userRole') === 'moderator'}
+                initialData={editingQuestion}
+                onClear={handleCancelEdit}
+              />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Panel: My Contributions */}
         <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">My Contributions</h2>
-            <p className="text-gray-600 mb-4">
-              {userContributions.length} question(s) submitted
-            </p>
-
-            {userContributions.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Eye className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                <p>No questions submitted yet</p>
-                <p className="text-sm">Your submitted questions will appear here</p>
-              </div>
-            ) : (
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {userContributions.map((question) => (
-                  <div key={question.id} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-sm line-clamp-2 flex-1 mr-2">
-                        {question.question}
-                      </h3>
-                      <div className="flex space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEdit(question)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-700"
-                          onClick={() => handleDelete(question.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs">
-                      <span className={`px-2 py-1 rounded ${
-                        question.status === "approved" 
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                      }`}>
-                        {question.status}
-                      </span>
-                      <span className="text-gray-500">
-                        {question.exam} • {question.subject}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-6 h-6" />
+                My Contributions
+              </CardTitle>
+              <CardDescription>
+                {userContributions.length} question(s) submitted • {pendingQuestions} pending review
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {userContributions.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <Eye className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg font-medium mb-2">No questions submitted yet</p>
+                  <p className="text-sm">Your submitted questions will appear here</p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {userContributions.map((question) => (
+                    <Card key={question.id} className="bg-gray-50 dark:bg-gray-800 border-0">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="font-semibold text-sm line-clamp-2 flex-1 mr-3">
+                            {question.question}
+                          </h3>
+                          <div className="flex space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEdit(question)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-700"
+                              onClick={() => handleDelete(question.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {question.exam && (
+                            <Badge variant="secondary">{question.exam}</Badge>
+                          )}
+                          {question.subject && (
+                            <Badge variant="outline">{question.subject}</Badge>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs">
+                          <Badge
+                            variant={question.status === "approved" ? "default" : "secondary"}
+                            className="flex items-center gap-1"
+                          >
+                            {question.status === "approved" ? (
+                              <CheckCircle className="w-3 h-3" />
+                            ) : (
+                              <Clock className="w-3 h-3" />
+                            )}
+                            {question.status}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Quick Stats */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-            <h3 className="font-semibold mb-3">Contribution Stats</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900 rounded">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
-                  {userContributions.length}
+          <Card>
+            <CardHeader>
+              <CardTitle>Submission Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
+                    {totalQuestions}
+                  </div>
+                  <div className="text-sm text-blue-600 dark:text-blue-300">Total</div>
                 </div>
-                <div className="text-sm text-blue-600 dark:text-blue-300">Total</div>
-              </div>
-              <div className="text-center p-3 bg-green-50 dark:bg-green-900 rounded">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-300">
-                  {userContributions.filter(q => q.status === "approved").length}
+                <div className="text-center p-3 bg-green-50 dark:bg-green-900 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-300">
+                    {approvedQuestions}
+                  </div>
+                  <div className="text-sm text-green-600 dark:text-green-300">Approved</div>
                 </div>
-                <div className="text-sm text-green-600 dark:text-green-300">Approved</div>
+                <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-300">
+                    {pendingQuestions}
+                  </div>
+                  <div className="text-sm text-yellow-600 dark:text-yellow-300">Pending</div>
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {submitted && !editingQuestion && (
-        <div className="bg-green-100 text-green-800 rounded p-4 mt-6">
-          Thank you for your contribution! Your question is pending review.
+        <div className="bg-green-100 border border-green-200 text-green-800 rounded-lg p-4 mt-8">
+          <div className="flex items-center">
+            <CheckCircle className="w-5 h-5 mr-2" />
+            <span>Thank you for your contribution! Your question is pending review.</span>
+          </div>
         </div>
       )}
     </div>
