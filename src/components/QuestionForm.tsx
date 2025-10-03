@@ -7,6 +7,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import MDEditor, { commands } from "@uiw/react-md-editor";
 import { AIGenerationButton } from "./AIGenerationButton";
+import { Textarea } from "@/components/ui/textarea";
+import { Upload, Link as LinkIcon, X } from "lucide-react";
 
 type QuestionFormProps = {
   onSubmit?: (data: any) => void;
@@ -30,7 +32,12 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
     D: "",
   });
   const [correctAnswers, setCorrectAnswers] = useState<string[]>([]);
+  const [aiContext, setAiContext] = useState<string>("");
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [urls, setUrls] = useState<string[]>([]);
+  const [currentUrl, setCurrentUrl] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const contextFileInputRef = useRef<HTMLInputElement>(null);
 
   // Pre-fill form when editing
   useEffect(() => {
@@ -99,6 +106,40 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
     }
   };
 
+  const handleContextFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files);
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+      
+      // Read file contents and add to context
+      newFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target?.result as string;
+          setAiContext(prev => prev + `\n\n[File: ${file.name}]\n${content}`);
+        };
+        reader.readAsText(file);
+      });
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addUrl = () => {
+    if (currentUrl.trim() && !urls.includes(currentUrl.trim())) {
+      setUrls(prev => [...prev, currentUrl.trim()]);
+      setAiContext(prev => prev + `\n\n[URL: ${currentUrl.trim()}]`);
+      setCurrentUrl("");
+    }
+  };
+
+  const removeUrl = (index: number) => {
+    setUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
   const createImageUploadCommand = (setValue: (value: string) => void, currentValue: string) => {
     return {
       name: "image-upload",
@@ -125,6 +166,9 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
         options: hasOptions ? options : undefined,
         answerType,
         correctAnswers,
+        aiContext,
+        uploadedFiles: uploadedFiles.map(f => f.name),
+        urls
       });
     }
     
@@ -147,6 +191,10 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
     setCorrectAnswers([]);
     setAnswerType("single");
     setHasOptions(false);
+    setAiContext("");
+    setUploadedFiles([]);
+    setUrls([]);
+    setCurrentUrl("");
   };
 
   const handleClear = () => {
@@ -166,13 +214,115 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
         onChange={(e) => handleImageUpload(e, setQuestion, question)}
       />
       
+      <input
+        type="file"
+        ref={contextFileInputRef}
+        multiple
+        style={{ display: 'none' }}
+        onChange={handleContextFileUpload}
+      />
+      
+      {/* AI Context Section - Only for moderators */}
+      {isModerator && (
+        <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+          <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-3">AI Generation Context</h3>
+          
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="ai-context" className="text-blue-700 dark:text-blue-300">Additional Context</Label>
+              <Textarea
+                id="ai-context"
+                value={aiContext}
+                onChange={(e) => setAiContext(e.target.value)}
+                placeholder="Provide additional context for AI generation (medical guidelines, research, etc.)"
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label className="text-blue-700 dark:text-blue-300">Upload Files</Label>
+              <div className="flex gap-2 mt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => contextFileInputRef.current?.click()}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload Files
+                </Button>
+                {uploadedFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {uploadedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded text-sm">
+                        <span className="truncate max-w-xs">{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="ml-1 text-red-500 hover:text-red-700"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <Label className="text-blue-700 dark:text-blue-300">Reference URLs</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  type="url"
+                  value={currentUrl}
+                  onChange={(e) => setCurrentUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addUrl())}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addUrl}
+                  className="flex items-center gap-2"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  Add URL
+                </Button>
+              </div>
+              {urls.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {urls.map((url, index) => (
+                    <div key={index} className="flex items-center bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded text-sm">
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-300 hover:underline truncate max-w-xs">
+                        {url}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => removeUrl(index)}
+                        className="ml-1 text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="block font-medium">Question</label>
           {isModerator && (
             <AIGenerationButton
               onContentGenerated={setQuestion}
-              context="medical exam question"
+              context={aiContext}
             />
           )}
         </div>
@@ -318,7 +468,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
           {isModerator && (
             <AIGenerationButton
               onContentGenerated={setExplanation}
-              context="medical explanation"
+              context={aiContext}
             />
           )}
         </div>
@@ -357,7 +507,7 @@ export const QuestionForm = ({ onSubmit, isModerator = false, initialData, onCle
           {isModerator && (
             <AIGenerationButton
               onContentGenerated={setDiscussion}
-              context="medical discussion points"
+              context={aiContext}
             />
           )}
         </div>

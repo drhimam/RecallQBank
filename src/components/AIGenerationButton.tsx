@@ -37,9 +37,16 @@ export const AIGenerationButton = ({
     setIsGenerating(true);
     
     try {
-      const prompt = context 
-        ? `Generate medical exam question content about: ${context}`
-        : "Generate a medical exam question with explanation";
+      // Build enhanced prompt with context
+      let prompt = "Generate medical exam question content";
+      
+      if (context && context.trim()) {
+        prompt += ` based on the following context:\n\n${context}\n\n`;
+      } else {
+        prompt += " about medical topics";
+      }
+      
+      prompt += "Please provide accurate, evidence-based medical information.";
 
       // Map providers to their respective API endpoints
       const providerEndpoints = {
