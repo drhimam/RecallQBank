@@ -181,9 +181,8 @@ const Qbank = () => {
     negativeMarking: false,
     negativeMarkValue: 0.25, // points per wrong answer
     passScore: 70, // percent required to pass
-    allowReview: true,
+    allowCheckAnswer: true, // replaced allowReview with allowCheckAnswer
     breakInterval: 0, // minutes between breaks (0 = none)
-    includePreviouslyStudied: true,
     avoidPreviouslyCorrect: false,
   });
 
@@ -292,10 +291,8 @@ const Qbank = () => {
       // Test mode: include locked only if privileged
       base = base.filter((q) => q.status !== "locked" || privilegedHandler(q.status));
 
-      // Handle previously studied inclusion for tests
-      if (!testSettings.includePreviouslyStudied) {
-        base = base.filter((q) => !previouslyStudiedIds.includes(q.id));
-      }
+      // Note: 'Include previously studied' option was removed for test mode,
+      // so we no longer filter based on previouslyStudiedIds here.
 
       // Avoid previously correct answers if requested
       if (testSettings.avoidPreviouslyCorrect) {
@@ -422,6 +419,11 @@ const Qbank = () => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Utility to determine whether checking answer is allowed in current mode
+  const canCheckAnswer = () => {
+    return mode === "study" ? true : testSettings.allowCheckAnswer;
   };
 
   return (
@@ -682,8 +684,8 @@ const Qbank = () => {
                         </div>
 
                         <div>
-                          <Label className="text-sm font-medium">Allow Review</Label>
-                          <Switch id="allow-review" checked={testSettings.allowReview} onCheckedChange={(checked) => setTestSettings({ ...testSettings, allowReview: !!checked })} />
+                          <Label className="text-sm font-medium">Allow Check Answer</Label>
+                          <Switch id="allow-check-answer" checked={testSettings.allowCheckAnswer} onCheckedChange={(checked) => setTestSettings({ ...testSettings, allowCheckAnswer: !!checked })} />
                         </div>
 
                         <div>
@@ -698,11 +700,6 @@ const Qbank = () => {
                       </div>
 
                       <div className="flex items-center gap-6 mt-3">
-                        <div className="flex items-center space-x-2">
-                          <Switch id="test-include-prev" checked={testSettings.includePreviouslyStudied} onCheckedChange={(checked) => setTestSettings({ ...testSettings, includePreviouslyStudied: !!checked })} />
-                          <Label htmlFor="test-include-prev">Include previously studied questions</Label>
-                        </div>
-
                         <div className="flex items-center space-x-2">
                           <Switch id="test-avoid-prev-correct" checked={testSettings.avoidPreviouslyCorrect} onCheckedChange={(checked) => setTestSettings({ ...testSettings, avoidPreviouslyCorrect: !!checked })} />
                           <Label htmlFor="test-avoid-prev-correct">Avoid previously correctly answered questions</Label>
@@ -801,7 +798,7 @@ const Qbank = () => {
                                   Previous
                                 </Button>
                                 <div className="flex gap-2">
-                                  {!showExplanation && selectedAnswer && (
+                                  {!showExplanation && selectedAnswer && canCheckAnswer() && (
                                     <Button onClick={() => setShowExplanation(true)}>Check Answer</Button>
                                   )}
                                   <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === shownQuestions.length - 1}>
@@ -946,7 +943,7 @@ const Qbank = () => {
                                 Previous
                               </Button>
                               <div className="flex gap-2">
-                                {!showExplanation && selectedAnswer && (
+                                {!showExplanation && selectedAnswer && canCheckAnswer() && (
                                   <Button onClick={() => setShowExplanation(true)}>Check Answer</Button>
                                 )}
                                 <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === shownQuestions.length - 1}>
