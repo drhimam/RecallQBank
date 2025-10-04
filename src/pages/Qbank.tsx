@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -191,9 +191,36 @@ const Qbank = () => {
     questionsPerTest: 10,
     randomizeQuestions: true,
     showTimer: true,
+    negativeMarking: false,
+    negativeMarkValue: 0.25, // points per wrong answer
+    passScore: 70, // percent required to pass
+    allowReview: true,
+    breakInterval: 0, // minutes between breaks (0 = none)
+    includePreviouslyStudied: true,
+    avoidPreviouslyCorrect: false,
   });
 
-  // study filters
+  // study settings (new variables requested)
+  const [studySettings, setStudySettings] = useState({
+    difficulty: "all", // all | beginner | intermediate | advanced
+    includeLocked: false,
+    questionFormat: "mcq", // mcq | saq | truefalse
+    sessionLength: 20, // number of questions in a study session
+    spacedRepetition: false,
+    includePreviouslyStudied: true, // NEW: include previously studied questions
+    avoidPreviouslyCorrect: false, // NEW: avoid questions the user previously answered correctly
+  });
+
+  // Mock previously studied / previously correct question IDs.
+  // In a real app these should come from user profile / backend.
+  const [previouslyStudiedIds] = useState<number[]>([1]); // user has studied question 1
+  const [previouslyCorrectIds] = useState<number[]>([2]); // user answered question 2 correctly
+
+  // multi-select filters for exams and subjects
+  const [selectedExams, setSelectedExams] = useState<string[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+
+  // study filters (kept for compatibility; exam/subject now come from multi-selects)
   const [studyFilters, setStudyFilters] = useState({
     exam: "all",
     subject: "all",
@@ -213,10 +240,104 @@ const Qbank = () => {
   const [testAnswers, setTestAnswers] = useState<Record<number, string>>({});
   const [flaggedQuestions, setFlaggedQuestions] = useState<number[]>([]);
 
+  // derive available exams and subjects from mockQuestions for multi-select options
+  const availableExams = useMemo(() => {
+    const s = new Set<string>();
+    mockQuestions.forEach((q) => s.add(q.exam));
+    return Array.from(s);
+  }, []);
+
+  const availableSubjects = useMemo(() => {
+    const s = new Set<string>();
+    mockQuestions.forEach((q) => s.add(q.subject));
+    return Array.from(s);
+  }, []);
+
   // derive sets
   const unlockedQuestions = mockQuestions.filter((q) => q.status === "unlocked");
   const lockedQuestions = mockQuestions.filter((q) => q.status === "locked");
-  const currentQuestion = unlockedQuestions[currentQuestionIndex];
+
+  // Privilege handler: returns true if user can access locked content.
+  const privilegedHandler = (questionStatus: string) => {
+    if (questionStatus !== "locked") return true;
+    // Allow access when subscription is active or user role is moderator/admin
+    const userRole = localStorage.getItem("userRole"); // e.g., 'moderator' | 'subscriber'
+    if (mockStats.subscriptionActive) return true;
+    if (userRole === "moderator" || userRole === "admin") return true;
+    return false;
+  };
+
+  // Determine which questions to show based on configuration and privileges
+  const shownQuestions = useMemo(() => {
+    let base = mockQuestions;
+
+    // Filter by exams multi-select if any chosen
+    if (selectedExams.length > 0) {
+      base = base.filter((q) => selectedExams.includes(q.exam));
+    }
+
+    // Filter by subjects multi-select if any chosen
+    if (selectedSubjects.length > 0) {
+      base = base.filter((q) => selectedSubjects.includes(q.subject));
+    }
+
+    if (mode === "study") {
+      // Exclude locked unless includeLocked is true and user is privileged for those locked questions
+      if (!studySettings.includeLocked) {
+        base = base.filter((q) => q.status !== "locked");
+      } else {
+        base = base.filter((q) => q.status !== "locked" || privilegedHandler(q.status));
+      }
+
+      // Handle previously studied inclusion
+      if (!studySettings.includePreviouslyStudied) {
+        base = base.filter((q) => !previouslyStudiedIds.includes(q.id));
+      }
+
+      // Avoid previously correctly answered questions if requested
+      if (studySettings.avoidPreviouslyCorrect) {
+        base = base.filter((q) => !previouslyCorrectIds.includes(q.id));
+      }
+
+      // Apply question format / difficulty if available (mock doesn't include those fields)
+      // Limit to session length
+      base = base.slice(0, Math.max(1, studySettings.sessionLength));
+    } else {
+      // Test mode: include locked only if privileged
+      base = base.filter((q) => q.status !== "locked" || privilegedHandler(q.status));
+
+      // Handle previously studied inclusion for tests
+      if (!testSettings.includePreviouslyStudied) {
+        base = base.filter((q) => !previouslyStudiedIds.includes(q.id));
+      }
+
+      // Avoid previously correct answers if requested
+      if (testSettings.avoidPreviouslyCorrect) {
+        base = base.filter((q) => !previouslyCorrectIds.includes(q.id));
+      }
+
+      // Limit to requested number of test questions
+      base = base.slice(0, Math.max(1, Math.min(testSettings.questionsPerTest, base.length)));
+    }
+
+    // Randomize if requested
+    if ((mode === "test" && testSettings.randomizeQuestions) || (mode === "study" && !studySettings.spacedRepetition)) {
+      base = [...base].sort(() => Math.random() - 0.5);
+    }
+
+    return base;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    mode,
+    studySettings,
+    testSettings,
+    selectedExams,
+    selectedSubjects,
+    previouslyStudiedIds,
+    previouslyCorrectIds,
+  ]);
+
+  const currentQuestion = shownQuestions[currentQuestionIndex];
 
   useEffect(() => {
     let timer: NodeJS.Timeout | undefined;
@@ -230,39 +351,30 @@ const Qbank = () => {
     };
   }, [isTimerRunning, timeRemaining, mode]);
 
-  // Privilege handler: returns true if user can access locked content.
-  const privilegedHandler = (questionStatus: string) => {
-    if (questionStatus !== "locked") return true;
-    // Allow access when subscription is active or user role is moderator/admin
-    const userRole = localStorage.getItem("userRole"); // e.g., 'moderator' | 'subscriber'
-    if (mockStats.subscriptionActive) return true;
-    if (userRole === "moderator" || userRole === "admin") return true;
-    return false;
-  };
-
   // Validate configuration before revealing question content
   const validateConfiguration = () => {
+    // Require at least one exam or subject selected (or allow selecting none meaning 'all')
+    const examsOk = selectedExams.length > 0 || selectedExams.length === 0;
+    const subjectsOk = selectedSubjects.length > 0 || selectedSubjects.length === 0;
+
     if (mode === "study") {
-      // require at least exam or subject selected (allow 'all')
-      return !!studyFilters.exam && !!studyFilters.subject;
+      // require session length positive
+      return examsOk && subjectsOk && studySettings.sessionLength > 0;
     } else {
-      // test mode: ensure positive time & questions
-      return testSettings.questionsPerTest > 0 && testSettings.timeLimit > 0;
+      // test mode: ensure positive time & questions & passScore valid
+      return testSettings.questionsPerTest > 0 && testSettings.timeLimit > 0 && testSettings.passScore >= 0 && testSettings.passScore <= 100;
     }
   };
 
   const applyConfiguration = () => {
     if (!validateConfiguration()) {
-      // simple inline feedback; in a full app you'd show a toast
       alert("Please complete the configuration before starting.");
       return;
     }
-    // reset question view state
     setConfigured(true);
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setShowExplanation(false);
-    // set timer for test mode
     if (mode === "test") {
       setTimeRemaining(testSettings.timeLimit * 60);
       setIsTimerRunning(false);
@@ -271,7 +383,6 @@ const Qbank = () => {
 
   const resetConfiguration = () => {
     setConfigured(false);
-    // keep previous settings if desired; for now we just hide questions
   };
 
   const handleAnswerSelect = (answerId: string) => {
@@ -284,7 +395,7 @@ const Qbank = () => {
   };
 
   const handleNextQuestion = () => {
-    const maxIndex = unlockedQuestions.length - 1;
+    const maxIndex = shownQuestions.length - 1;
     if (currentQuestionIndex < maxIndex) {
       setCurrentQuestionIndex((i) => i + 1);
       setSelectedAnswer(mode === "test" ? testAnswers[currentQuestionIndex + 1] || null : null);
@@ -404,8 +515,6 @@ const Qbank = () => {
                 </CardContent>
               </Card>
             </div>
-
-            {/* ... other statistics blocks remain unchanged (omitted for brevity) */}
           </div>
         ) : (
           <div className="space-y-6">
@@ -422,7 +531,7 @@ const Qbank = () => {
                 </Button>
               </div>
 
-              <div className="text-sm text-gray-500">Showing {unlockedQuestions.length} unlocked questions</div>
+              <div className="text-sm text-gray-500">Showing {shownQuestions.length} questions based on configuration</div>
             </div>
 
             {/* Configuration gating: show configuration card until user applies settings */}
@@ -438,42 +547,121 @@ const Qbank = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Multi-select for Exams */}
+                  <div>
+                    <Label className="text-sm font-medium">Select Exams</Label>
+                    <select
+                      multiple
+                      value={selectedExams}
+                      onChange={(e) =>
+                        setSelectedExams(Array.from(e.target.selectedOptions).map((o) => o.value))
+                      }
+                      className="w-full border rounded p-2"
+                    >
+                      {availableExams.map((ex) => (
+                        <option key={ex} value={ex}>
+                          {ex}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple exams; leave empty to include all.</div>
+                  </div>
+
+                  {/* Multi-select for Subjects */}
+                  <div>
+                    <Label className="text-sm font-medium">Select Subjects</Label>
+                    <select
+                      multiple
+                      value={selectedSubjects}
+                      onChange={(e) =>
+                        setSelectedSubjects(Array.from(e.target.selectedOptions).map((o) => o.value))
+                      }
+                      className="w-full border rounded p-2"
+                    >
+                      {availableSubjects.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple subjects; leave empty to include all.</div>
+                  </div>
+
                   {mode === "study" ? (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Select value={studyFilters.exam} onValueChange={(v) => setStudyFilters({ ...studyFilters, exam: v })}>
-                          <SelectTrigger className="w-[220px]">
-                            <SelectValue placeholder="Select Exam" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Exams</SelectItem>
-                            <SelectItem value="MRCP">MRCP</SelectItem>
-                            <SelectItem value="FCPS">FCPS</SelectItem>
-                            <SelectItem value="USMLE">USMLE</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">Difficulty</Label>
+                          <Select value={studySettings.difficulty} onValueChange={(v) => setStudySettings({ ...studySettings, difficulty: v })}>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              <SelectItem value="beginner">Beginner</SelectItem>
+                              <SelectItem value="intermediate">Intermediate</SelectItem>
+                              <SelectItem value="advanced">Advanced</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                        <Select value={studyFilters.subject} onValueChange={(v) => setStudyFilters({ ...studyFilters, subject: v })}>
-                          <SelectTrigger className="w-[220px]">
-                            <SelectValue placeholder="Select Subject" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Subjects</SelectItem>
-                            <SelectItem value="Cardiology">Cardiology</SelectItem>
-                            <SelectItem value="Nephrology">Nephrology</SelectItem>
-                            <SelectItem value="Neurology">Neurology</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div>
+                          <Label className="text-sm font-medium">Format</Label>
+                          <Select value={studySettings.questionFormat} onValueChange={(v) => setStudySettings({ ...studySettings, questionFormat: v })}>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="mcq">MCQ</SelectItem>
+                              <SelectItem value="saq">SAQ</SelectItem>
+                              <SelectItem value="truefalse">True/False</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium">Session Length (questions)</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={studySettings.sessionLength}
+                            onChange={(e) => setStudySettings({ ...studySettings, sessionLength: Math.max(1, Number(e.target.value)) })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center space-x-2">
+                          <Switch id="include-locked" checked={studySettings.includeLocked} onCheckedChange={(checked) => setStudySettings({ ...studySettings, includeLocked: !!checked })} />
+                          <Label htmlFor="include-locked">Include locked questions (only shown if you have access)</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Switch id="include-prev-studied" checked={studySettings.includePreviouslyStudied} onCheckedChange={(checked) => setStudySettings({ ...studySettings, includePreviouslyStudied: !!checked })} />
+                          <Label htmlFor="include-prev-studied">Include previously studied questions</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Switch id="avoid-prev-correct" checked={studySettings.avoidPreviouslyCorrect} onCheckedChange={(checked) => setStudySettings({ ...studySettings, avoidPreviouslyCorrect: !!checked })} />
+                          <Label htmlFor="avoid-prev-correct">Avoid previously correctly answered questions</Label>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Switch id="spaced-rep" checked={studySettings.spacedRepetition} onCheckedChange={(checked) => setStudySettings({ ...studySettings, spacedRepetition: !!checked })} />
+                          <Label htmlFor="spaced-rep">Enable spaced repetition</Label>
+                        </div>
                       </div>
 
                       <div className="text-sm text-gray-500">
-                        Optionally choose topics/tags below or leave as "All" to include the full unlocked set.
+                        Optionally choose topics/tags below or leave subjects/exams empty to include the full unlocked set.
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div className="lg:col-span-2">
                           <Label className="text-sm font-medium">Time Limit (minutes)</Label>
                           <Input
                             type="number"
@@ -482,6 +670,7 @@ const Qbank = () => {
                             onChange={(e) => setTestSettings({ ...testSettings, timeLimit: Math.max(5, Number(e.target.value)) })}
                           />
                         </div>
+
                         <div>
                           <Label className="text-sm font-medium">Number of Questions</Label>
                           <Input
@@ -491,13 +680,65 @@ const Qbank = () => {
                             onChange={(e) => setTestSettings({ ...testSettings, questionsPerTest: Math.max(1, Number(e.target.value)) })}
                           />
                         </div>
-                        <div className="flex items-center space-x-2 pt-6">
-                          <Switch id="randomize" checked={testSettings.randomizeQuestions} onCheckedChange={(checked) => setTestSettings({ ...testSettings, randomizeQuestions: checked })} />
-                          <Label htmlFor="randomize">Randomize Questions</Label>
+
+                        <div>
+                          <Label className="text-sm font-medium">Pass Score (%)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={testSettings.passScore}
+                            onChange={(e) => setTestSettings({ ...testSettings, passScore: Math.min(100, Math.max(0, Number(e.target.value))) })}
+                          />
                         </div>
-                        <div className="flex items-center space-x-2 pt-6">
-                          <Switch id="timer" checked={testSettings.showTimer} onCheckedChange={(checked) => setTestSettings({ ...testSettings, showTimer: checked })} />
-                          <Label htmlFor="timer">Show Timer</Label>
+
+                        <div>
+                          <Label className="text-sm font-medium">Negative Marking</Label>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id="negative"
+                              checked={testSettings.negativeMarking}
+                              onCheckedChange={(checked) => setTestSettings({ ...testSettings, negativeMarking: !!checked })}
+                            />
+                            {testSettings.negativeMarking && (
+                              <Input
+                                type="number"
+                                step="0.05"
+                                min={0}
+                                max={1}
+                                value={testSettings.negativeMarkValue}
+                                onChange={(e) => setTestSettings({ ...testSettings, negativeMarkValue: Math.max(0, Number(e.target.value)) })}
+                                className="w-28"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium">Allow Review</Label>
+                          <Switch id="allow-review" checked={testSettings.allowReview} onCheckedChange={(checked) => setTestSettings({ ...testSettings, allowReview: !!checked })} />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium">Break Interval (min)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={testSettings.breakInterval}
+                            onChange={(e) => setTestSettings({ ...testSettings, breakInterval: Math.max(0, Number(e.target.value)) })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-6 mt-3">
+                        <div className="flex items-center space-x-2">
+                          <Switch id="test-include-prev" checked={testSettings.includePreviouslyStudied} onCheckedChange={(checked) => setTestSettings({ ...testSettings, includePreviouslyStudied: !!checked })} />
+                          <Label htmlFor="test-include-prev">Include previously studied questions</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Switch id="test-avoid-prev-correct" checked={testSettings.avoidPreviouslyCorrect} onCheckedChange={(checked) => setTestSettings({ ...testSettings, avoidPreviouslyCorrect: !!checked })} />
+                          <Label htmlFor="test-avoid-prev-correct">Avoid previously correctly answered questions</Label>
                         </div>
                       </div>
 
@@ -523,138 +764,129 @@ const Qbank = () => {
                 </div>
 
                 {/* Now show question content but gate locked questions by privilege */}
-                {/* If the current question is locked and the user lacks privileges, show an access message */}
-                {mockQuestions.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">No questions available</div>
+                {shownQuestions.length === 0 ? (
+                  <Card>
+                    <CardContent>
+                      <div className="text-center py-8">
+                        <p className="text-lg font-medium mb-2">No questions available for the selected configuration</p>
+                        <p className="text-sm text-gray-500 mb-4">
+                          Try changing filters or enabling include locked (if you have access).
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ) : (
                   <>
-                    {/* If current unlockedQuestions array is empty (all locked), we still need to show locked gating */}
-                    {unlockedQuestions.length === 0 ? (
+                    {/* If the current question is locked and the user lacks privileges, show access message */}
+                    {currentQuestion?.status === "locked" && !privilegedHandler(currentQuestion.status) ? (
                       <Card>
                         <CardContent>
                           <div className="text-center py-8">
-                            <p className="text-lg font-medium mb-2">No unlocked questions available</p>
-                            <p className="text-sm text-gray-500 mb-4">
-                              You may need to subscribe or contribute to gain access.
+                            <p className="text-lg font-semibold mb-2">Locked Content</p>
+                            <p className="text-sm text-gray-600 mb-4">
+                              This question is locked. Upgrade your access or contact an administrator to view locked questions.
                             </p>
-                            <Button onClick={() => alert("Subscription flow would be triggered here")}>Get Access</Button>
+                            <div className="flex items-center justify-center gap-2">
+                              <Button onClick={() => alert("Open subscription / upgrade modal")}>Upgrade</Button>
+                              <Button variant="outline" onClick={() => alert("Request access workflow")}>Request Access</Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
                     ) : (
                       <>
-                        {/* If the question is locked, check privilege; otherwise render as normal */}
-                        {!privilegedHandler(currentQuestion?.status || "unlocked") ? (
-                          <Card>
-                            <CardContent>
-                              <div className="text-center py-8">
-                                <p className="text-lg font-semibold mb-2">Locked Content</p>
-                                <p className="text-sm text-gray-600 mb-4">
-                                  This question is locked. Upgrade your access or contact an administrator to view locked questions.
-                                </p>
-                                <div className="flex items-center justify-center gap-2">
-                                  <Button onClick={() => alert("Open subscription / upgrade modal")}>Upgrade</Button>
-                                  <Button variant="outline" onClick={() => alert("Request access workflow")}>Request Access</Button>
+                        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">{currentQuestion?.exam}</Badge>
+                            <Badge variant="outline">{currentQuestion?.subject}</Badge>
+                            {currentQuestion?.topics.map((topic: string, idx: number) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {topic}
+                              </Badge>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setIsBookmarked(!isBookmarked)} className={isBookmarked ? "text-blue-600" : ""}>
+                              <Bookmark className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => setIsFlagged(!isFlagged)} className={isFlagged ? "text-red-600" : ""}>
+                              <Flag className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">Question {currentQuestionIndex + 1} of {shownQuestions.length}</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</p>
+
+                            <RadioGroup value={selectedAnswer || ""} onValueChange={handleAnswerSelect} className="space-y-3 mb-6">
+                              {currentQuestion?.options.map((option: any) => (
+                                <div key={option.id} className={`flex items-start p-3 rounded-lg border ${selectedAnswer === option.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"} ${showExplanation && option.id === currentQuestion.correctAnswer ? "border-green-500 bg-green-50 dark:bg-green-900/20" : ""} ${showExplanation && selectedAnswer === option.id && option.id !== currentQuestion.correctAnswer ? "border-red-500 bg-red-50 dark:bg-red-900/20" : ""}`}>
+                                  <input type="radio" name="option" value={option.id} checked={selectedAnswer === option.id} onChange={() => handleAnswerSelect(option.id)} className="mt-1" />
+                                  <Label htmlFor={option.id} className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer">
+                                    <span className="font-medium mr-2">{option.id}.</span>
+                                    {option.text}
+                                  </Label>
+                                </div>
+                              ))}
+                            </RadioGroup>
+
+                            {showExplanation && (
+                              <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
+                                <div>
+                                  <h3 className="font-semibold mb-2">Explanation:</h3>
+                                  <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold mb-2">Discussion:</h3>
+                                  <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
+                                </div>
+                                <div className="flex items-center justify-between pt-2">
+                                  <div className="flex gap-2">
+                                    <Button variant="outline" size="sm">
+                                      <ThumbsUp className="w-4 h-4 mr-1" />
+                                      Helpful
+                                    </Button>
+                                    <Button variant="outline" size="sm">
+                                      <ThumbsDown className="w-4 h-4 mr-1" />
+                                      Not Helpful
+                                    </Button>
+                                  </div>
+                                  <Button variant="outline" size="sm">
+                                    <MessageCircle className="w-4 h-4 mr-1" />
+                                    Discuss
+                                  </Button>
                                 </div>
                               </div>
-                            </CardContent>
-                          </Card>
-                        ) : (
-                          <>
-                            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="secondary">{currentQuestion?.exam}</Badge>
-                                <Badge variant="outline">{currentQuestion?.subject}</Badge>
-                                {currentQuestion?.topics.map((topic: string, idx: number) => (
-                                  <Badge key={idx} variant="outline" className="text-xs">
-                                    {topic}
-                                  </Badge>
-                                ))}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => setIsBookmarked(!isBookmarked)} className={isBookmarked ? "text-blue-600" : ""}>
-                                  <Bookmark className="w-4 h-4" />
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => setIsFlagged(!isFlagged)} className={isFlagged ? "text-red-600" : ""}>
-                                  <Flag className="w-4 h-4" />
-                                </Button>
+                            )}
+
+                            <div className="space-y-4">
+                              <div>
+                                <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
+                                <Textarea id="notes" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Add your notes here..." className="mt-1" rows={3} />
                               </div>
                             </div>
+                          </CardContent>
+                        </Card>
 
-                            <Card>
-                              <CardHeader>
-                                <CardTitle className="text-lg">Question {currentQuestionIndex + 1} of {unlockedQuestions.length}</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <p className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</p>
-
-                                <RadioGroup value={selectedAnswer || ""} onValueChange={handleAnswerSelect} className="space-y-3 mb-6">
-                                  {currentQuestion?.options.map((option: any) => (
-                                    <div key={option.id} className={`flex items-start p-3 rounded-lg border ${selectedAnswer === option.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"} ${showExplanation && option.id === currentQuestion.correctAnswer ? "border-green-500 bg-green-50 dark:bg-green-900/20" : ""} ${showExplanation && selectedAnswer === option.id && option.id !== currentQuestion.correctAnswer ? "border-red-500 bg-red-50 dark:bg-red-900/20" : ""}`}>
-                                      <input type="radio" name="option" value={option.id} checked={selectedAnswer === option.id} onChange={() => handleAnswerSelect(option.id)} className="mt-1" />
-                                      <Label htmlFor={option.id} className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer">
-                                        <span className="font-medium mr-2">{option.id}.</span>
-                                        {option.text}
-                                      </Label>
-                                    </div>
-                                  ))}
-                                </RadioGroup>
-
-                                {showExplanation && (
-                                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
-                                    <div>
-                                      <h3 className="font-semibold mb-2">Explanation:</h3>
-                                      <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
-                                    </div>
-                                    <div>
-                                      <h3 className="font-semibold mb-2">Discussion:</h3>
-                                      <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
-                                    </div>
-                                    <div className="flex items-center justify-between pt-2">
-                                      <div className="flex gap-2">
-                                        <Button variant="outline" size="sm">
-                                          <ThumbsUp className="w-4 h-4 mr-1" />
-                                          Helpful
-                                        </Button>
-                                        <Button variant="outline" size="sm">
-                                          <ThumbsDown className="w-4 h-4 mr-1" />
-                                          Not Helpful
-                                        </Button>
-                                      </div>
-                                      <Button variant="outline" size="sm">
-                                        <MessageCircle className="w-4 h-4 mr-1" />
-                                        Discuss
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )}
-
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
-                                    <Textarea id="notes" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Add your notes here..." className="mt-1" rows={3} />
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-
-                            <div className="flex justify-between">
-                              <Button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} variant="outline">
-                                <ChevronLeft className="w-4 h-4 mr-1" />
-                                Previous
-                              </Button>
-                              <div className="flex gap-2">
-                                {!showExplanation && selectedAnswer && (
-                                  <Button onClick={() => setShowExplanation(true)}>Check Answer</Button>
-                                )}
-                                <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === unlockedQuestions.length - 1}>
-                                  Next
-                                  <ChevronRight className="w-4 h-4 ml-1" />
-                                </Button>
-                              </div>
-                            </div>
-                          </>
-                        )}
+                        <div className="flex justify-between">
+                          <Button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} variant="outline">
+                            <ChevronLeft className="w-4 h-4 mr-1" />
+                            Previous
+                          </Button>
+                          <div className="flex gap-2">
+                            {!showExplanation && selectedAnswer && (
+                              <Button onClick={() => setShowExplanation(true)}>Check Answer</Button>
+                            )}
+                            <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === shownQuestions.length - 1}>
+                              Next
+                              <ChevronRight className="w-4 h-4 ml-1" />
+                            </Button>
+                          </div>
+                        </div>
                       </>
                     )}
                   </>
