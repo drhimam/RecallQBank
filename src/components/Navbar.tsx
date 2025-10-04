@@ -1,19 +1,31 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const navLinks = [
-  { to: "/", label: "Home" },
-  { to: "/qbank", label: "Qbank" },
-  { to: "/submit", label: "Submit Question" },
-  { to: "/profile", label: "Profile" },
-  { to: "/login", label: "Login" },
-];
-
-export const Navbar = () => {
+const Navbar = () => {
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem("token");
+    setIsAuthenticated(!!token);
+  }, []);
+
+  const navLinks = isAuthenticated
+    ? [
+        { to: "/", label: "Home" },
+        { to: "/qbank", label: "Qbank" },
+        { to: "/submit", label: "Submit Question" },
+        { to: "/profile", label: "Profile" },
+      ]
+    : [
+        { to: "/", label: "Home" },
+        { to: "/qbank", label: "Qbank" },
+        { to: "/login", label: "Login" },
+      ];
 
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm sticky top-0 z-50">
@@ -68,3 +80,5 @@ export const Navbar = () => {
     </nav>
   );
 };
+
+export default Navbar;
