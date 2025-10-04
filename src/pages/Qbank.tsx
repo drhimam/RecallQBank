@@ -166,7 +166,7 @@ const mockQuestionSets = [
 
 const Qbank = () => {
   const [mode, setMode] = useState<"study" | "test">("study");
-  const [activeTab, setActiveTab] = useState<"statistics" | "questions">("statistics");
+  const [activeTab, setActiveTab] = useState<"statistics" | "questions">("questions");
   const [answered, setAnswered] = useState<number[]>([0, 1]); // indices of answered questions
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -564,434 +564,170 @@ const Qbank = () => {
               </Card>
             </div>
           </div>
-        ) : mode === "study" ? (
-          /* Study Mode */
+        ) : (
+          /* Questions Tab - Contains both Study and Test Modes */
           <div className="space-y-6">
-            {/* Study Setup Controls */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Sliders className="w-5 h-5" />
-                    Study Configuration
-                  </span>
-                  <div className="flex gap-2">
-                    <Dialog open={showCreateSetDialog} onOpenChange={setShowCreateSetDialog}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Plus className="w-4 h-4 mr-1" />
-                          Create Set
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Create Question Set</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="setName">Set Name</Label>
-                            <Input
-                              id="setName"
-                              value={newSetName}
-                              onChange={(e) => setNewSetName(e.target.value)}
-                              placeholder="e.g., Cardiology Review"
-                            />
-                          </div>
-                          <div>
-                            <Label>Selected Questions: {selectedQuestionsForSet.length}</Label>
-                            <div className="text-sm text-gray-500 mt-1">
-                              Select questions below to add to this set
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={() => setShowCreateSetDialog(false)}>
-                              Cancel
-                            </Button>
-                            <Button onClick={handleCreateQuestionSet} disabled={!newSetName.trim()}>
+            {mode === "study" ? (
+              /* Study Mode */
+              <div className="space-y-6">
+                {/* Study Setup Controls */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Sliders className="w-5 h-5" />
+                        Study Configuration
+                      </span>
+                      <div className="flex gap-2">
+                        <Dialog open={showCreateSetDialog} onOpenChange={setShowCreateSetDialog}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Plus className="w-4 h-4 mr-1" />
                               Create Set
                             </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                    <Button variant="outline" size="sm">
-                      <Filter className="w-4 h-4 mr-1" />
-                      Filters
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Select value={studyFilters.exam} onValueChange={(v) => setStudyFilters({...studyFilters, exam: v})}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select Exam" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Exams</SelectItem>
-                      <SelectItem value="MRCP">MRCP</SelectItem>
-                      <SelectItem value="FCPS">FCPS</SelectItem>
-                      <SelectItem value="USMLE">USMLE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select value={studyFilters.subject} onValueChange={(v) => setStudyFilters({...studyFilters, subject: v})}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select Subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Subjects</SelectItem>
-                      <SelectItem value="Cardiology">Cardiology</SelectItem>
-                      <SelectItem value="Nephrology">Nephrology</SelectItem>
-                      <SelectItem value="Neurology">Neurology</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Button variant="outline">
-                    Topics
-                  </Button>
-                  <Button variant="outline">
-                    Tags
-                  </Button>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {unlockedQuestions.length} unlocked questions
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      Randomize
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Reset Filters
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Question Sets */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <Card 
-                className={`cursor-pointer border-2 ${activeQuestionSet === null ? 'border-blue-500' : ''}`}
-                onClick={() => setActiveQuestionSet(null)}
-              >
-                <CardContent className="p-4">
-                  <div className="font-medium">All Unlocked Questions</div>
-                  <div className="text-sm text-gray-500">{unlockedQuestions.length} questions</div>
-                </CardContent>
-              </Card>
-              
-              {mockQuestionSets.map((set) => (
-                <Card 
-                  key={set.id}
-                  className={`cursor-pointer border-2 ${activeQuestionSet === set.id ? 'border-blue-500' : ''}`}
-                  onClick={() => setActiveQuestionSet(set.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="font-medium">{set.name}</div>
-                    <div className="text-sm text-gray-500">{set.count} questions</div>
-                    <div className="text-xs text-gray-400 mt-1">{set.exam} • {set.subject}</div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Current Question */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{currentQuestion?.exam}</Badge>
-                <Badge variant="outline">{currentQuestion?.subject}</Badge>
-                {currentQuestion?.topics.map((topic, idx) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    {topic}
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsBookmarked(!isBookmarked)}
-                  className={isBookmarked ? "text-blue-600" : ""}
-                >
-                  <Bookmark className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsFlagged(!isFlagged)}
-                  className={isFlagged ? "text-red-600" : ""}
-                >
-                  <Flag className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  Question {currentQuestionIndex + 1} of {unlockedQuestions.length}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</p>
-                
-                <RadioGroup 
-                  value={selectedAnswer || ""} 
-                  onValueChange={handleAnswerSelect}
-                  className="space-y-3 mb-6"
-                >
-                  {currentQuestion?.options.map((option) => (
-                    <div 
-                      key={option.id} 
-                      className={`flex items-start p-3 rounded-lg border ${
-                        selectedAnswer === option.id 
-                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
-                          : "border-gray-200 dark:border-gray-700"
-                      } ${
-                        showExplanation && option.id === currentQuestion.correctAnswer
-                          ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                          : ""
-                      } ${
-                        showExplanation && selectedAnswer === option.id && option.id !== currentQuestion.correctAnswer
-                          ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                          : ""
-                      }`}
-                    >
-                      <RadioGroupItem 
-                        value={option.id} 
-                        id={option.id} 
-                        className="mt-1"
-                        disabled={showExplanation}
-                      />
-                      <Label 
-                        htmlFor={option.id} 
-                        className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer"
-                      >
-                        <span className="font-medium mr-2">{option.id}.</span>
-                        {option.text}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-
-                {showExplanation && (
-                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
-                    <div>
-                      <h3 className="font-semibold mb-2">Explanation:</h3>
-                      <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Discussion:</h3>
-                      <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
-                    </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="flex gap-2">
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Create Question Set</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label htmlFor="setName">Set Name</Label>
+                                <Input
+                                  id="setName"
+                                  value={newSetName}
+                                  onChange={(e) => setNewSetName(e.target.value)}
+                                  placeholder="e.g., Cardiology Review"
+                                />
+                              </div>
+                              <div>
+                                <Label>Selected Questions: {selectedQuestionsForSet.length}</Label>
+                                <div className="text-sm text-gray-500 mt-1">
+                                  Select questions below to add to this set
+                                </div>
+                              </div>
+                              <div className="flex justify-end gap-2">
+                                <Button variant="outline" onClick={() => setShowCreateSetDialog(false)}>
+                                  Cancel
+                                </Button>
+                                <Button onClick={handleCreateQuestionSet} disabled={!newSetName.trim()}>
+                                  Create Set
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                         <Button variant="outline" size="sm">
-                          <ThumbsUp className="w-4 h-4 mr-1" />
-                          Helpful
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <ThumbsDown className="w-4 h-4 mr-1" />
-                          Not Helpful
+                          <Filter className="w-4 h-4 mr-1" />
+                          Filters
                         </Button>
                       </div>
-                      <Button variant="outline" size="sm">
-                        <MessageCircle className="w-4 h-4 mr-1" />
-                        Discuss
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Select value={studyFilters.exam} onValueChange={(v) => setStudyFilters({...studyFilters, exam: v})}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Select Exam" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Exams</SelectItem>
+                          <SelectItem value="MRCP">MRCP</SelectItem>
+                          <SelectItem value="FCPS">FCPS</SelectItem>
+                          <SelectItem value="USMLE">USMLE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select value={studyFilters.subject} onValueChange={(v) => setStudyFilters({...studyFilters, subject: v})}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Select Subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Subjects</SelectItem>
+                          <SelectItem value="Cardiology">Cardiology</SelectItem>
+                          <SelectItem value="Nephrology">Nephrology</SelectItem>
+                          <SelectItem value="Neurology">Neurology</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Button variant="outline">
+                        Topics
+                      </Button>
+                      <Button variant="outline">
+                        Tags
                       </Button>
                     </div>
-                  </div>
-                )}
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Showing {unlockedQuestions.length} unlocked questions
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          Randomize
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          Reset Filters
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={userNotes}
-                      onChange={(e) => setUserNotes(e.target.value)}
-                      placeholder="Add your notes here..."
-                      className="mt-1"
-                      rows={3}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="flex justify-between">
-              <Button
-                onClick={handlePreviousQuestion}
-                disabled={currentQuestionIndex === 0}
-                variant="outline"
-              >
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Previous
-              </Button>
-              <div className="flex gap-2">
-                {!showExplanation && selectedAnswer && (
-                  <Button onClick={handleShowAnswer}>
-                    Check Answer
-                  </Button>
-                )}
-                <Button
-                  onClick={handleNextQuestion}
-                  disabled={currentQuestionIndex === unlockedQuestions.length - 1}
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* Test Mode */
-          <div className="space-y-6">
-            {/* Test Setup Controls */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Settings className="w-5 h-5" />
-                    Test Configuration
-                  </span>
-                  <Button variant="outline" size="sm">
-                    <Filter className="w-4 h-4 mr-1" />
-                    Customize
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium">Time Limit</Label>
-                    <Select 
-                      value={testSettings.timeLimit.toString()} 
-                      onValueChange={(v) => setTestSettings({...testSettings, timeLimit: parseInt(v)})}
+                {/* Question Sets */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <Card 
+                    className={`cursor-pointer border-2 ${activeQuestionSet === null ? 'border-blue-500' : ''}`}
+                    onClick={() => setActiveQuestionSet(null)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="font-medium">All Unlocked Questions</div>
+                      <div className="text-sm text-gray-500">{unlockedQuestions.length} questions</div>
+                    </CardContent>
+                  </Card>
+                  
+                  {mockQuestionSets.map((set) => (
+                    <Card 
+                      key={set.id}
+                      className={`cursor-pointer border-2 ${activeQuestionSet === set.id ? 'border-blue-500' : ''}`}
+                      onClick={() => setActiveQuestionSet(set.id)}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15">15 minutes</SelectItem>
-                        <SelectItem value="30">30 minutes</SelectItem>
-                        <SelectItem value="45">45 minutes</SelectItem>
-                        <SelectItem value="60">60 minutes</SelectItem>
-                        <SelectItem value="90">90 minutes</SelectItem>
-                        <SelectItem value="120">120 minutes</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium">Questions</Label>
-                    <Select 
-                      value={testSettings.questionsPerTest.toString()} 
-                      onValueChange={(v) => setTestSettings({...testSettings, questionsPerTest: parseInt(v)})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="10">10 questions</SelectItem>
-                        <SelectItem value="20">20 questions</SelectItem>
-                        <SelectItem value="30">30 questions</SelectItem>
-                        <SelectItem value="50">50 questions</SelectItem>
-                        <SelectItem value="100">100 questions</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 pt-5">
-                    <Switch
-                      id="randomize"
-                      checked={testSettings.randomizeQuestions}
-                      onCheckedChange={(checked) => setTestSettings({...testSettings, randomizeQuestions: checked})}
-                    />
-                    <Label htmlFor="randomize">Randomize Questions</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 pt-5">
-                    <Switch
-                      id="timer"
-                      checked={testSettings.showTimer}
-                      onCheckedChange={(checked) => setTestSettings({...testSettings, showTimer: checked})}
-                    />
-                    <Label htmlFor="timer">Show Timer</Label>
-                  </div>
+                      <CardContent className="p-4">
+                        <div className="font-medium">{set.name}</div>
+                        <div className="text-sm text-gray-500">{set.count} questions</div>
+                        <div className="text-xs text-gray-400 mt-1">{set.exam} • {set.subject}</div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-                
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <Select>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select Exam" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Exams</SelectItem>
-                      <SelectItem value="MRCP">MRCP</SelectItem>
-                      <SelectItem value="FCPS">FCPS</SelectItem>
-                      <SelectItem value="USMLE">USMLE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select Subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Subjects</SelectItem>
-                      <SelectItem value="Cardiology">Cardiology</SelectItem>
-                      <SelectItem value="Nephrology">Nephrology</SelectItem>
-                      <SelectItem value="Neurology">Neurology</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Button variant="outline">
-                    Topics
-                  </Button>
-                  <Button variant="outline">
-                    Tags
-                  </Button>
-                </div>
-                
-                <div className="flex justify-end mt-4">
-                  <Button onClick={handleStartTest}>
-                    Start Test
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Test Mode Question Display */}
-            {mode === "test" && (
-              <>
+                {/* Current Question */}
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{currentQuestion?.exam}</Badge>
                     <Badge variant="outline">{currentQuestion?.subject}</Badge>
+                    {currentQuestion?.topics.map((topic, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {topic}
+                      </Badge>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-4">
-                    {testSettings.showTimer && (
-                      <div className="flex items-center gap-2">
-                        <div className={`px-3 py-1 rounded font-mono ${
-                          timeRemaining < 300 ? "text-red-600 bg-red-100" : "text-gray-700 bg-gray-100"
-                        }`}>
-                          {formatTime(timeRemaining)}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handlePauseTest}
-                        >
-                          {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        </Button>
-                      </div>
-                    )}
-                    <Button variant="outline" size="sm">
-                      <Settings className="w-4 h-4" />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsBookmarked(!isBookmarked)}
+                      className={isBookmarked ? "text-blue-600" : ""}
+                    >
+                      <Bookmark className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsFlagged(!isFlagged)}
+                      className={isFlagged ? "text-red-600" : ""}
+                    >
+                      <Flag className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -999,7 +735,7 @@ const Qbank = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">
-                      Question {currentQuestionIndex + 1} of {Math.min(testSettings.questionsPerTest, unlockedQuestions.length)}
+                      Question {currentQuestionIndex + 1} of {unlockedQuestions.length}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1017,12 +753,21 @@ const Qbank = () => {
                             selectedAnswer === option.id 
                               ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
                               : "border-gray-200 dark:border-gray-700"
+                          } ${
+                            showExplanation && option.id === currentQuestion.correctAnswer
+                              ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                              : ""
+                          } ${
+                            showExplanation && selectedAnswer === option.id && option.id !== currentQuestion.correctAnswer
+                              ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                              : ""
                           }`}
                         >
                           <RadioGroupItem 
                             value={option.id} 
                             id={option.id} 
                             className="mt-1"
+                            disabled={showExplanation}
                           />
                           <Label 
                             htmlFor={option.id} 
@@ -1034,6 +779,49 @@ const Qbank = () => {
                         </div>
                       ))}
                     </RadioGroup>
+
+                    {showExplanation && (
+                      <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
+                        <div>
+                          <h3 className="font-semibold mb-2">Explanation:</h3>
+                          <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold mb-2">Discussion:</h3>
+                          <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
+                        </div>
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm">
+                              <ThumbsUp className="w-4 h-4 mr-1" />
+                              Helpful
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <ThumbsDown className="w-4 h-4 mr-1" />
+                              Not Helpful
+                            </Button>
+                          </div>
+                          <Button variant="outline" size="sm">
+                            <MessageCircle className="w-4 h-4 mr-1" />
+                            Discuss
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
+                        <Textarea
+                          id="notes"
+                          value={userNotes}
+                          onChange={(e) => setUserNotes(e.target.value)}
+                          placeholder="Add your notes here..."
+                          className="mt-1"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -1047,63 +835,280 @@ const Qbank = () => {
                     Previous
                   </Button>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => toggleFlagQuestion(currentQuestionIndex)}
-                    >
-                      <Flag className="w-4 h-4 mr-1" />
-                      {flaggedQuestions.includes(currentQuestionIndex) ? "Unflag" : "Flag"}
-                    </Button>
+                    {!showExplanation && selectedAnswer && (
+                      <Button onClick={handleShowAnswer}>
+                        Check Answer
+                      </Button>
+                    )}
                     <Button
                       onClick={handleNextQuestion}
-                      disabled={currentQuestionIndex === Math.min(testSettings.questionsPerTest, unlockedQuestions.length) - 1}
+                      disabled={currentQuestionIndex === unlockedQuestions.length - 1}
                     >
                       Next
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </div>
                 </div>
-
+              </div>
+            ) : (
+              /* Test Mode */
+              <div className="space-y-6">
+                {/* Test Setup Controls */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Test Progress</CardTitle>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Settings className="w-5 h-5" />
+                        Test Configuration
+                      </span>
+                      <Button variant="outline" size="sm">
+                        <Filter className="w-4 h-4 mr-1" />
+                        Customize
+                      </Button>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Answered: {Object.keys(testAnswers).length} of {Math.min(testSettings.questionsPerTest, unlockedQuestions.length)}
-                      </span>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Flagged: {flaggedQuestions.length}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={(Object.keys(testAnswers).length / Math.min(testSettings.questionsPerTest, unlockedQuestions.length)) * 100} 
-                      className="mb-4" 
-                    />
-                    <div className="flex justify-center gap-2">
-                      {Array.from({ length: Math.min(testSettings.questionsPerTest, unlockedQuestions.length) }).map((_, index) => (
-                        <div
-                          key={index}
-                          className={`w-3 h-3 rounded-full cursor-pointer ${
-                            index === currentQuestionIndex
-                              ? "bg-blue-600"
-                              : testAnswers[index]
-                              ? "bg-green-500"
-                              : flaggedQuestions.includes(index)
-                              ? "bg-red-500"
-                              : "bg-gray-200 dark:bg-gray-700"
-                          }`}
-                          onClick={() => {
-                            setCurrentQuestionIndex(index);
-                            setSelectedAnswer(testAnswers[index] || null);
-                          }}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium">Time Limit</Label>
+                        <Select 
+                          value={testSettings.timeLimit.toString()} 
+                          onValueChange={(v) => setTestSettings({...testSettings, timeLimit: parseInt(v)})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="15">15 minutes</SelectItem>
+                            <SelectItem value="30">30 minutes</SelectItem>
+                            <SelectItem value="45">45 minutes</SelectItem>
+                            <SelectItem value="60">60 minutes</SelectItem>
+                            <SelectItem value="90">90 minutes</SelectItem>
+                            <SelectItem value="120">120 minutes</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium">Questions</Label>
+                        <Select 
+                          value={testSettings.questionsPerTest.toString()} 
+                          onValueChange={(v) => setTestSettings({...testSettings, questionsPerTest: parseInt(v)})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">10 questions</SelectItem>
+                            <SelectItem value="20">20 questions</SelectItem>
+                            <SelectItem value="30">30 questions</SelectItem>
+                            <SelectItem value="50">50 questions</SelectItem>
+                            <SelectItem value="100">100 questions</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2 pt-5">
+                        <Switch
+                          id="randomize"
+                          checked={testSettings.randomizeQuestions}
+                          onCheckedChange={(checked) => setTestSettings({...testSettings, randomizeQuestions: checked})}
                         />
-                      ))}
+                        <Label htmlFor="randomize">Randomize Questions</Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2 pt-5">
+                        <Switch
+                          id="timer"
+                          checked={testSettings.showTimer}
+                          onCheckedChange={(checked) => setTestSettings({...testSettings, showTimer: checked})}
+                        />
+                        <Label htmlFor="timer">Show Timer</Label>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      <Select>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Select Exam" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Exams</SelectItem>
+                          <SelectItem value="MRCP">MRCP</SelectItem>
+                          <SelectItem value="FCPS">FCPS</SelectItem>
+                          <SelectItem value="USMLE">USMLE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Select Subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Subjects</SelectItem>
+                          <SelectItem value="Cardiology">Cardiology</SelectItem>
+                          <SelectItem value="Nephrology">Nephrology</SelectItem>
+                          <SelectItem value="Neurology">Neurology</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Button variant="outline">
+                        Topics
+                      </Button>
+                      <Button variant="outline">
+                        Tags
+                      </Button>
+                    </div>
+                    
+                    <div className="flex justify-end mt-4">
+                      <Button onClick={handleStartTest}>
+                        Start Test
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
-              </>
+
+                {/* Test Mode Question Display */}
+                {mode === "test" && (
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{currentQuestion?.exam}</Badge>
+                        <Badge variant="outline">{currentQuestion?.subject}</Badge>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        {testSettings.showTimer && (
+                          <div className="flex items-center gap-2">
+                            <div className={`px-3 py-1 rounded font-mono ${
+                              timeRemaining < 300 ? "text-red-600 bg-red-100" : "text-gray-700 bg-gray-100"
+                            }`}>
+                              {formatTime(timeRemaining)}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handlePauseTest}
+                            >
+                              {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                            </Button>
+                          </div>
+                        )}
+                        <Button variant="outline" size="sm">
+                          <Settings className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">
+                          Question {currentQuestionIndex + 1} of {Math.min(testSettings.questionsPerTest, unlockedQuestions.length)}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</p>
+                        
+                        <RadioGroup 
+                          value={selectedAnswer || ""} 
+                          onValueChange={handleAnswerSelect}
+                          className="space-y-3 mb-6"
+                        >
+                          {currentQuestion?.options.map((option) => (
+                            <div 
+                              key={option.id} 
+                              className={`flex items-start p-3 rounded-lg border ${
+                                selectedAnswer === option.id 
+                                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                                  : "border-gray-200 dark:border-gray-700"
+                              }`}
+                            >
+                              <RadioGroupItem 
+                                value={option.id} 
+                                id={option.id} 
+                                className="mt-1"
+                              />
+                              <Label 
+                                htmlFor={option.id} 
+                                className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer"
+                              >
+                                <span className="font-medium mr-2">{option.id}.</span>
+                                {option.text}
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </CardContent>
+                    </Card>
+
+                    <div className="flex justify-between">
+                      <Button
+                        onClick={handlePreviousQuestion}
+                        disabled={currentQuestionIndex === 0}
+                        variant="outline"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Previous
+                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => toggleFlagQuestion(currentQuestionIndex)}
+                        >
+                          <Flag className="w-4 h-4 mr-1" />
+                          {flaggedQuestions.includes(currentQuestionIndex) ? "Unflag" : "Flag"}
+                        </Button>
+                        <Button
+                          onClick={handleNextQuestion}
+                          disabled={currentQuestionIndex === Math.min(testSettings.questionsPerTest, unlockedQuestions.length) - 1}
+                        >
+                          Next
+                          <ChevronRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Test Progress</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            Answered: {Object.keys(testAnswers).length} of {Math.min(testSettings.questionsPerTest, unlockedQuestions.length)}
+                          </span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            Flagged: {flaggedQuestions.length}
+                          </span>
+                        </div>
+                        <Progress 
+                          value={(Object.keys(testAnswers).length / Math.min(testSettings.questionsPerTest, unlockedQuestions.length)) * 100} 
+                          className="mb-4" 
+                        />
+                        <div className="flex justify-center gap-2">
+                          {Array.from({ length: Math.min(testSettings.questionsPerTest, unlockedQuestions.length) }).map((_, index) => (
+                            <div
+                              key={index}
+                              className={`w-3 h-3 rounded-full cursor-pointer ${
+                                index === currentQuestionIndex
+                                  ? "bg-blue-600"
+                                  : testAnswers[index]
+                                  ? "bg-green-500"
+                                  : flaggedQuestions.includes(index)
+                                  ? "bg-red-500"
+                                  : "bg-gray-200 dark:bg-gray-700"
+                              }`}
+                              onClick={() => {
+                                setCurrentQuestionIndex(index);
+                                setSelectedAnswer(testAnswers[index] || null);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
+              </div>
             )}
           </div>
         )}
