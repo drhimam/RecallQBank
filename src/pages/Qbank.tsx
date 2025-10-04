@@ -525,10 +525,14 @@ const Qbank = () => {
                   <BookOpen className="w-4 h-4" />
                   Study
                 </Button>
-                <Button variant={mode === "test" ? "default" : "outline"} onClick={() => setMode("test")} className="flex items-center gap-2">
-                  <Target className="w-4 h-4" />
-                  Test
-                </Button>
+
+                {/* Hide Test option when study mode is configured and active */}
+                {!(configured && mode === "study") && (
+                  <Button variant={mode === "test" ? "default" : "outline"} onClick={() => setMode("test")} className="flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    Test
+                  </Button>
+                )}
               </div>
 
               <div className="text-sm text-gray-500">Showing {shownQuestions.length} questions based on configuration</div>
