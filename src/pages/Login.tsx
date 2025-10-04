@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ const Login = () => {
   const [specialty, setSpecialty] = useState("");
   const [loading, setLoading] = useState(false);
   
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,10 +27,9 @@ const Login = () => {
       // Simulate API call
       setTimeout(() => {
         if (isLogin) {
-          // Save token to localStorage
-          localStorage.setItem("token", "fake-jwt-token");
+          // Simulate successful login
+          login("fake-jwt-token");
           toast.success("Login successful!");
-          navigate("/profile");
         } else {
           toast.success("Registration successful! Please log in.");
           setIsLogin(true);

@@ -1,22 +1,12 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Eye, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-type User = {
-  _id: string;
-  username: string;
-  email: string;
-  specialty: string;
-  role: string;
-  contributions: number;
-  approved: number;
-  pending: number;
-};
 
 type Contribution = {
   _id: string;
@@ -30,62 +20,22 @@ type Contribution = {
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState<"profile" | "contributions" | "moderation">("profile");
-  const [user, setUser] = useState<User | null>(null);
   const [userContributions, setUserContributions] = useState<Contribution[]>([]);
-  const [moderatorData, setModeratorData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   // Check if user is logged in
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    // Simulate fetching user data
-    setTimeout(() => {
-      const mockUser: User = {
-        _id: "1",
-        username: "dr_smith",
-        email: "dr.smith@example.com",
-        specialty: "Cardiology",
-        role: "moderator",
-        contributions: 15,
-        approved: 12,
-        pending: 3
-      };
-      
-      const mockContributions: Contribution[] = [
-        {
-          _id: "1",
-          question: "A 65-year-old man presents with chest pain and shortness of breath...",
-          exam: "MRCP",
-          subject: "Cardiology",
-          status: "approved",
-          topics: ["Chest Pain", "Acute Coronary Syndrome"],
-          createdAt: "2024-01-15"
-        },
-        {
-          _id: "2",
-          question: "Which of the following is NOT a feature of nephrotic syndrome?",
-          exam: "FCPS",
-          subject: "Nephrology",
-          status: "pending",
-          topics: ["Renal", "Proteinuria"],
-          createdAt: "2024-01-20"
-        }
-      ];
-
-      setUser(mockUser);
-      setUserContributions(mockContributions);
-    }, 500);
-  }, [navigate]);
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
+    logout();
   };
 
   const handleDeleteContribution = (id: string) => {
@@ -93,12 +43,31 @@ const Profile = () => {
     toast.success("Question deleted successfully!");
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Loading...</div>
-      </div>
-    );
+  // Mock contributions data
+  const mockContributions: Contribution[] = [
+    {
+      _id: "1",
+      question: "A 65-year-old man presents with chest pain and shortness of breath...",
+      exam: "MRCP",
+      subject: "Cardiology",
+      status: "approved",
+      topics: ["Chest Pain", "Acute Coronary Syndrome"],
+      createdAt: "2024-01-15"
+    },
+    {
+      _id: "2",
+      question: "Which of the following is NOT a feature of nephrotic syndrome?",
+      exam: "FCPS",
+      subject: "Nephrology",
+      status: "pending",
+      topics: ["Renal", "Proteinuria"],
+      createdAt: "2024-01-20"
+    }
+  ];
+
+  // Set mock contributions if not already set
+  if (userContributions.length === 0) {
+    setUserContributions(mockContributions);
   }
 
   const isModerator = user.role === "moderator" || user.role === "admin";
@@ -133,7 +102,7 @@ const Profile = () => {
             }`}
             onClick={() => setActiveTab("contributions")}
           >
-            My Contributions ({userContributions.length})
+            My Contributions ({mockContributions.length})
           </button>
           {isModerator && (
             <button
@@ -194,25 +163,25 @@ const Profile = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
-                      {user.contributions}
+                      15
                     </div>
                     <div className="text-sm text-blue-600 dark:text-blue-300">Total Questions</div>
                   </div>
                   <div className="text-center p-4 bg-green-50 dark:bg-green-900 rounded-lg">
                     <div className="text-2xl font-bold text-green-600 dark:text-green-300">
-                      {user.approved}
+                      12
                     </div>
                     <div className="text-sm text-green-600 dark:text-green-300">Approved</div>
                   </div>
                   <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
                     <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-300">
-                      {user.pending}
+                      3
                     </div>
                     <div className="text-sm text-yellow-600 dark:text-yellow-300">Pending</div>
                   </div>
                   <div className="text-center p-4 bg-purple-50 dark:bg-purple-900 rounded-lg">
                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
-                      {user.contributions > 0 ? Math.round((user.approved / user.contributions) * 100) : 0}%
+                      80%
                     </div>
                     <div className="text-sm text-purple-600 dark:text-purple-300">Approval Rate</div>
                   </div>
@@ -229,7 +198,7 @@ const Profile = () => {
             <CardContent>
               {loading ? (
                 <div className="text-center py-8">Loading contributions...</div>
-              ) : userContributions.length === 0 ? (
+              ) : mockContributions.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Eye className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                   <p>No questions submitted yet</p>
@@ -237,7 +206,7 @@ const Profile = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {userContributions.map((contribution) => (
+                  {mockContributions.map((contribution) => (
                     <div key={contribution._id} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
