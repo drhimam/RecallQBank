@@ -812,7 +812,7 @@ const Qbank = () => {
                               </div>
                             </div>
 
-                            {/* Right: Explanation & Discussion */}
+                            {/* Right: Explanation & Discussion (appears only after selecting an answer) */}
                             <div>
                               <Card>
                                 <CardHeader>
@@ -822,32 +822,40 @@ const Qbank = () => {
                                   </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                  <div className="mb-4">
-                                    <h4 className="font-semibold mb-2">Explanation</h4>
-                                    <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
-                                  </div>
-
-                                  <div className="mb-4">
-                                    <h4 className="font-semibold mb-2">Discussion</h4>
-                                    <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
-                                  </div>
-
-                                  <div className="flex items-center justify-between pt-2">
-                                    <div className="flex gap-2">
-                                      <Button variant="outline" size="sm">
-                                        <ThumbsUp className="w-4 h-4 mr-1" />
-                                        Helpful
-                                      </Button>
-                                      <Button variant="outline" size="sm">
-                                        <ThumbsDown className="w-4 h-4 mr-1" />
-                                        Not Helpful
-                                      </Button>
+                                  {!showExplanation ? (
+                                    <div className="py-12 text-center text-gray-500">
+                                      Select an answer on the left to reveal the explanation and discussion.
                                     </div>
-                                    <Button variant="outline" size="sm">
-                                      <MessageCircle className="w-4 h-4 mr-1" />
-                                      Discuss
-                                    </Button>
-                                  </div>
+                                  ) : (
+                                    <>
+                                      <div className="mb-4">
+                                        <h4 className="font-semibold mb-2">Explanation</h4>
+                                        <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
+                                      </div>
+
+                                      <div className="mb-4">
+                                        <h4 className="font-semibold mb-2">Discussion</h4>
+                                        <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
+                                      </div>
+
+                                      <div className="flex items-center justify-between pt-2">
+                                        <div className="flex gap-2">
+                                          <Button variant="outline" size="sm">
+                                            <ThumbsUp className="w-4 h-4 mr-1" />
+                                            Helpful
+                                          </Button>
+                                          <Button variant="outline" size="sm">
+                                            <ThumbsDown className="w-4 h-4 mr-1" />
+                                            Not Helpful
+                                          </Button>
+                                        </div>
+                                        <Button variant="outline" size="sm">
+                                          <MessageCircle className="w-4 h-4 mr-1" />
+                                          Discuss
+                                        </Button>
+                                      </div>
+                                    </>
+                                  )}
                                 </CardContent>
                               </Card>
                             </div>
