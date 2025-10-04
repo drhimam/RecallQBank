@@ -11,7 +11,7 @@ import MyContributions from "./pages/MyContributions";
 import ModeratorDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
-import { Navbar } from "./components/Navbar";
+import Navbar from "./components/Navbar";
 
 const queryClient = new QueryClient();
 
