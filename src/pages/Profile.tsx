@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Eye, Shield } from "lucide-react";
 import { toast } from "sonner";
@@ -44,42 +44,43 @@ const Profile = () => {
       return;
     }
 
-    // In a real app, we would fetch user data from the backend
-    // For now, we'll simulate user data
-    const mockUser: User = {
-      _id: "1",
-      username: "dr_smith",
-      email: "dr.smith@example.com",
-      specialty: "Cardiology",
-      role: "moderator",
-      contributions: 15,
-      approved: 12,
-      pending: 3
-    };
-    
-    const mockContributions: Contribution[] = [
-      {
+    // Simulate fetching user data
+    setTimeout(() => {
+      const mockUser: User = {
         _id: "1",
-        question: "A 65-year-old man presents with chest pain and shortness of breath...",
-        exam: "MRCP",
-        subject: "Cardiology",
-        status: "approved",
-        topics: ["Chest Pain", "Acute Coronary Syndrome"],
-        createdAt: "2024-01-15"
-      },
-      {
-        _id: "2",
-        question: "Which of the following is NOT a feature of nephrotic syndrome?",
-        exam: "FCPS",
-        subject: "Nephrology",
-        status: "pending",
-        topics: ["Renal", "Proteinuria"],
-        createdAt: "2024-01-20"
-      }
-    ];
+        username: "dr_smith",
+        email: "dr.smith@example.com",
+        specialty: "Cardiology",
+        role: "moderator",
+        contributions: 15,
+        approved: 12,
+        pending: 3
+      };
+      
+      const mockContributions: Contribution[] = [
+        {
+          _id: "1",
+          question: "A 65-year-old man presents with chest pain and shortness of breath...",
+          exam: "MRCP",
+          subject: "Cardiology",
+          status: "approved",
+          topics: ["Chest Pain", "Acute Coronary Syndrome"],
+          createdAt: "2024-01-15"
+        },
+        {
+          _id: "2",
+          question: "Which of the following is NOT a feature of nephrotic syndrome?",
+          exam: "FCPS",
+          subject: "Nephrology",
+          status: "pending",
+          topics: ["Renal", "Proteinuria"],
+          createdAt: "2024-01-20"
+        }
+      ];
 
-    setUser(mockUser);
-    setUserContributions(mockContributions);
+      setUser(mockUser);
+      setUserContributions(mockContributions);
+    }, 500);
   }, [navigate]);
 
   const handleLogout = () => {

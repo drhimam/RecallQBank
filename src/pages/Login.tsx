@@ -22,28 +22,11 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const url = isLogin 
-        ? "http://localhost:5000/api/auth/login"
-        : "http://localhost:5000/api/auth/register";
-      
-      const body = isLogin
-        ? { email, password }
-        : { username, email, password, specialty };
-      
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
+      // Simulate API call
+      setTimeout(() => {
         if (isLogin) {
           // Save token to localStorage
-          localStorage.setItem("token", data.token);
+          localStorage.setItem("token", "fake-jwt-token");
           toast.success("Login successful!");
           navigate("/profile");
         } else {
@@ -52,13 +35,11 @@ const Login = () => {
           setUsername("");
           setSpecialty("");
         }
-      } else {
-        toast.error(data.message || (isLogin ? "Login failed" : "Registration failed"));
-      }
+        setLoading(false);
+      }, 1000);
     } catch (error) {
       toast.error("An error occurred. Please try again.");
       console.error("Auth error:", error);
-    } finally {
       setLoading(false);
     }
   };
