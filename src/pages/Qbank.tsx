@@ -314,21 +314,9 @@ const Qbank = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Qbank</h1>
           <div className="flex gap-2">
-            <Button
-              variant={mode === "study" ? "default" : "outline"}
-              onClick={() => setMode("study")}
-              className="flex items-center gap-2"
-            >
-              <BookOpen className="w-4 h-4" />
-              Study Mode
-            </Button>
-            <Button
-              variant={mode === "test" ? "default" : "outline"}
-              onClick={mode === "test" ? handleEndTest : handleStartTest}
-              className="flex items-center gap-2"
-            >
-              <Target className="w-4 h-4" />
-              {mode === "test" ? "End Test" : "Test Mode"}
+            <Button variant="outline" onClick={() => setActiveTab("statistics")}>
+              <Trophy className="w-4 h-4 mr-1" />
+              View Stats
             </Button>
           </div>
         </div>
@@ -565,8 +553,34 @@ const Qbank = () => {
             </div>
           </div>
         ) : (
-          /* Questions Tab - Contains both Study and Test Modes */
+          /* Questions Tab - Contains both Study and Test Modes (mode controls are here) */
           <div className="space-y-6">
+            {/* Mode switcher placed inside Questions tab */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant={mode === "study" ? "default" : "outline"}
+                  onClick={() => setMode("study")}
+                  className="flex items-center gap-2"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Study
+                </Button>
+                <Button
+                  variant={mode === "test" ? "default" : "outline"}
+                  onClick={() => setMode("test")}
+                  className="flex items-center gap-2"
+                >
+                  <Target className="w-4 h-4" />
+                  Test
+                </Button>
+              </div>
+
+              <div className="text-sm text-gray-500">
+                Showing {unlockedQuestions.length} unlocked questions
+              </div>
+            </div>
+
             {mode === "study" ? (
               /* Study Mode */
               <div className="space-y-6">
