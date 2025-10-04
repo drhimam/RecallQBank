@@ -181,7 +181,7 @@ const Qbank = () => {
     negativeMarking: false,
     negativeMarkValue: 0.25, // points per wrong answer
     passScore: 70, // percent required to pass
-    allowCheckAnswer: true, // replaced allowReview with allowCheckAnswer
+    allowCheckAnswer: true,
     breakInterval: 0, // minutes between breaks (0 = none)
     avoidPreviouslyCorrect: false,
   });
@@ -290,9 +290,6 @@ const Qbank = () => {
     } else {
       // Test mode: include locked only if privileged
       base = base.filter((q) => q.status !== "locked" || privilegedHandler(q.status));
-
-      // Note: 'Include previously studied' option was removed for test mode,
-      // so we no longer filter based on previouslyStudiedIds here.
 
       // Avoid previously correct answers if requested
       if (testSettings.avoidPreviouslyCorrect) {
@@ -521,10 +518,13 @@ const Qbank = () => {
             {/* Mode switcher inside Questions tab */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Button variant={mode === "study" ? "default" : "outline"} onClick={() => setMode("study")} className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4" />
-                  Study
-                </Button>
+                {/* Hide Study option when test mode is configured and active */}
+                {!(configured && mode === "test") && (
+                  <Button variant={mode === "study" ? "default" : "outline"} onClick={() => setMode("study")} className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    Study
+                  </Button>
+                )}
 
                 {/* Hide Test option when study mode is configured and active */}
                 {!(configured && mode === "study") && (
