@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -225,6 +225,10 @@ const Qbank = () => {
     perQuestion?: { question: string; correctAnswer: string | null; yourAnswer: string | null }[];
   } | null>(null);
 
+  // timer helpers
+  const initialTimeRef = useRef<number | null>(null); // seconds
+  const [warningGiven, setWarningGiven] = useState(false);
+
   // derive available exams and subjects from mockQuestions for multi-select options
   const availableExams = useMemo(() => {
     const s = new Set<string>();
@@ -369,10 +373,15 @@ const Qbank = () => {
     setShowExplanation(false);
     setTestSubmitted(false);
     setResults(null);
-    // set timer for test mode
+    setTestAnswers({});
+    setWarningGiven(false);
+
+    // set timer for test mode and auto-start it
     if (mode === "test") {
-      setTimeRemaining(testSettings.timeLimit * 60);
-      setIsTimerRunning(false);
+      const totalSeconds = testSettings.timeLimit * 60;
+      initialTimeRef.current = totalSeconds;
+      setTimeRemaining(totalSeconds);
+      setIsTimerRunning(true);
     }
   };
 
@@ -381,6 +390,9 @@ const Qbank = () => {
     setTestSubmitted(false);
     setResults(null);
     setTestAnswers({});
+    setIsTimerRunning(false);
+    initialTimeRef.current = null;
+    setWarningGiven(false);
   };
 
   const handleAnswerSelect = (answerId: string) => {
@@ -437,6 +449,7 @@ const Qbank = () => {
   const answeredProgress = (mockStats.answered / mockStats.unlocked) * 100;
 
   const formatTime = (seconds: number) => {
+    if (seconds <= 0) return "00:00";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
@@ -495,8 +508,32 @@ const Qbank = () => {
     const r = computeResults();
     setResults(r);
     setTestSubmitted(true);
+    setIsTimerRunning(false);
     toast.success("Test submitted successfully!");
   };
+
+  // Watch remaining time to give warning at 10% and auto-submit at 0
+  useEffect(() => {
+    if (!configured || mode !== "test" || initialTimeRef.current === null) return;
+
+    const initial = initialTimeRef.current;
+    const warningThreshold = Math.ceil(initial * 0.1); // 10% of total seconds
+
+    if (timeRemaining > 0 && timeRemaining <= warningThreshold && !warningGiven) {
+      setWarningGiven(true);
+      toast.warning("Warning: Only 10% of your test time remains!");
+    }
+
+    if (timeRemaining <= 0 && !testSubmitted) {
+      // Auto-submit
+      const r = computeResults();
+      setResults(r);
+      setTestSubmitted(true);
+      setIsTimerRunning(false);
+      toast.success("Time's up — test auto-submitted.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining, configured, mode, warningGiven, testSubmitted]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -730,7 +767,7 @@ const Qbank = () => {
                         </div>
 
                         <div>
-                          <Label className="text-sm font-medium">Pass Score (%)</Label>
+                          <Label className="text-sm font.medium">Pass Score (%)</Label>
                           <Input
                             type="number"
                             min={0}
@@ -1010,8 +1047,15 @@ const Qbank = () => {
                                     ))}
                                   </div>
 
-                                  <div className="text-sm text-gray-600">
-                                    Answered: <span className="font-semibold">{answeredCount}</span> • Remaining: <span className="font-semibold">{remainingCount}</span>
+                                  <div className="flex items-center gap-4">
+                                    <div className="text-sm text-gray-600">
+                                      Answered: <span className="font-semibold">{answeredCount}</span> • Remaining: <span className="font-semibold">{remainingCount}</span>
+                                    </div>
+                                    {/* Timer display */}
+                                    <div className={`text-sm font-mono ${initialTimeRef.current && timeRemaining <= Math.ceil((initialTimeRef.current || 1) * 0.1) ? "text-yellow-600" : "text-gray-700 dark:text-gray-200"}`}>
+                                      <Clock className="inline-block w-4 h-4 mr-1" />
+                                      {formatTime(timeRemaining)}
+                                    </div>
                                   </div>
                                 </div>
 
