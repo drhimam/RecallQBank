@@ -27,7 +27,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RadioGroup } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 type Mode = "study" | "test";
 
@@ -210,6 +211,20 @@ const Qbank = () => {
   const [testAnswers, setTestAnswers] = useState<Record<number, string>>({});
   const [flaggedQuestions, setFlaggedQuestions] = useState<number[]>([]);
 
+  // submission & results state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [testSubmitted, setTestSubmitted] = useState(false);
+  const [results, setResults] = useState<{
+    total: number;
+    attempted: number;
+    correct: number;
+    incorrect: number;
+    unattempted: number;
+    percent: number;
+    passed: boolean;
+    perQuestion?: { question: string; correctAnswer: string | null; yourAnswer: string | null }[];
+  } | null>(null);
+
   // derive available exams and subjects from mockQuestions for multi-select options
   const availableExams = useMemo(() => {
     const s = new Set<string>();
@@ -352,6 +367,8 @@ const Qbank = () => {
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setShowExplanation(false);
+    setTestSubmitted(false);
+    setResults(null);
     // set timer for test mode
     if (mode === "test") {
       setTimeRemaining(testSettings.timeLimit * 60);
@@ -361,14 +378,19 @@ const Qbank = () => {
 
   const resetConfiguration = () => {
     setConfigured(false);
+    setTestSubmitted(false);
+    setResults(null);
+    setTestAnswers({});
   };
 
   const handleAnswerSelect = (answerId: string) => {
-    setSelectedAnswer(answerId);
-    if (mode === "study") {
-      setShowExplanation(true);
-    } else {
+    // In test mode, record answer in testAnswers using currentQuestionIndex
+    if (mode === "test") {
       setTestAnswers((prev) => ({ ...prev, [currentQuestionIndex]: answerId }));
+      setSelectedAnswer(answerId);
+    } else {
+      setSelectedAnswer(answerId);
+      setShowExplanation(true);
     }
   };
 
@@ -376,7 +398,8 @@ const Qbank = () => {
     const maxIndex = shownQuestions.length - 1;
     if (currentQuestionIndex < maxIndex) {
       setCurrentQuestionIndex((i) => i + 1);
-      setSelectedAnswer(mode === "test" ? testAnswers[currentQuestionIndex + 1] || null : null);
+      const nextIdx = currentQuestionIndex + 1;
+      setSelectedAnswer(mode === "test" ? testAnswers[nextIdx] || null : null);
       setShowExplanation(false);
     }
   };
@@ -384,7 +407,8 @@ const Qbank = () => {
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex((i) => i - 1);
-      setSelectedAnswer(mode === "test" ? testAnswers[currentQuestionIndex - 1] || null : null);
+      const prevIdx = currentQuestionIndex - 1;
+      setSelectedAnswer(mode === "test" ? testAnswers[prevIdx] || null : null);
       setShowExplanation(false);
     }
   };
@@ -421,6 +445,57 @@ const Qbank = () => {
   // Utility to determine whether checking answer is allowed in current mode
   const canCheckAnswer = () => {
     return mode === "study" ? true : testSettings.allowCheckAnswer;
+  };
+
+  // Counts for test mode
+  const answeredCount = useMemo(() => {
+    return Object.keys(testAnswers).filter((k) => !!testAnswers[Number(k)]).length;
+  }, [testAnswers]);
+
+  const remainingCount = Math.max(0, shownQuestions.length - answeredCount);
+
+  const computeResults = () => {
+    const total = shownQuestions.length;
+    let correct = 0;
+    let attempted = 0;
+    const perQuestion: { question: string; correctAnswer: string | null; yourAnswer: string | null }[] = [];
+
+    shownQuestions.forEach((q, idx) => {
+      const your = testAnswers[idx] || null;
+      if (your) attempted += 1;
+      const isCorrect = your && (your === (q.correctAnswer || q.correctAnswer));
+      if (isCorrect) correct += 1;
+      perQuestion.push({
+        question: q.question,
+        correctAnswer: q.correctAnswer || null,
+        yourAnswer: your,
+      });
+    });
+
+    const unattempted = total - attempted;
+    const incorrect = attempted - correct;
+    const percent = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const passed = percent >= testSettings.passScore;
+
+    return {
+      total,
+      attempted,
+      correct,
+      incorrect,
+      unattempted,
+      percent,
+      passed,
+      perQuestion,
+    };
+  };
+
+  const handleConfirmSubmit = () => {
+    setConfirmOpen(false);
+    // compute results
+    const r = computeResults();
+    setResults(r);
+    setTestSubmitted(true);
+    toast.success("Test submitted successfully!");
   };
 
   return (
@@ -763,199 +838,284 @@ const Qbank = () => {
                       </Card>
                     ) : (
                       <>
-                        {/* Study mode: show two-panel layout */}
-                        {mode === "study" ? (
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            {/* Left: Question + options */}
-                            <div>
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle className="text-lg">Question {currentQuestionIndex + 1} of {shownQuestions.length}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</div>
-
-                                  <RadioGroup value={selectedAnswer || ""} onValueChange={handleAnswerSelect} className="space-y-3 mb-6">
-                                    {currentQuestion?.options.map((option: any) => (
-                                      <div key={option.id} className={`flex items-start p-3 rounded-lg border ${selectedAnswer === option.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"} ${showExplanation && option.id === currentQuestion.correctAnswer ? "border-green-500 bg-green-50 dark:bg-green-900/20" : ""} ${showExplanation && selectedAnswer === option.id && option.id !== currentQuestion.correctAnswer ? "border-red-500 bg-red-50 dark:bg-red-900/20" : ""}`}>
-                                        <input type="radio" name="option" value={option.id} checked={selectedAnswer === option.id} onChange={() => handleAnswerSelect(option.id)} className="mt-1" />
-                                        <Label htmlFor={option.id} className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer">
-                                          <span className="font-medium mr-2">{option.id}.</span>
-                                          {option.text}
-                                        </Label>
-                                      </div>
-                                    ))}
-                                  </RadioGroup>
-
-                                  <div className="space-y-4">
-                                    <div>
-                                      <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
-                                      <Textarea id="notes" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Add your notes here..." className="mt-1" rows={3} />
-                                    </div>
+                        {/* If test was submitted and we're in test mode, show results */}
+                        {mode === "test" && testSubmitted && results ? (
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Test Results</CardTitle>
+                              <CardDescription>
+                                You answered {results.attempted} of {results.total} questions.
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div className="p-4 bg-white dark:bg-gray-900 rounded shadow">
+                                  <div className="text-sm text-gray-500">Score</div>
+                                  <div className="text-2xl font-bold">{results.correct} / {results.total}</div>
+                                </div>
+                                <div className="p-4 bg-white dark:bg-gray-900 rounded shadow">
+                                  <div className="text-sm text-gray-500">Percent</div>
+                                  <div className="text-2xl font-bold">{results.percent}%</div>
+                                </div>
+                                <div className="p-4 bg-white dark:bg-gray-900 rounded shadow">
+                                  <div className="text-sm text-gray-500">Result</div>
+                                  <div className={`text-2xl font-bold ${results.passed ? "text-green-600" : "text-red-600"}`}>
+                                    {results.passed ? "Passed" : "Failed"}
                                   </div>
-                                </CardContent>
-                              </Card>
-
-                              <div className="flex justify-between mt-4">
-                                <Button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} variant="outline">
-                                  <ChevronLeft className="w-4 h-4 mr-1" />
-                                  Previous
-                                </Button>
-                                <div className="flex gap-2">
-                                  {!showExplanation && selectedAnswer && canCheckAnswer() && (
-                                    <Button onClick={() => setShowExplanation(true)}>Check Answer</Button>
-                                  )}
-                                  <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === shownQuestions.length - 1}>
-                                    Next
-                                    <ChevronRight className="w-4 h-4 ml-1" />
-                                  </Button>
                                 </div>
                               </div>
-                            </div>
 
-                            {/* Right: Explanation & Discussion (appears only after selecting an answer) */}
-                            <div>
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle className="text-lg">Explanation & Discussion</CardTitle>
-                                  <CardDescription>
-                                    Detailed reasoning and further notes for this question.
-                                  </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                  {!showExplanation ? (
-                                    <div className="py-12 text-center text-gray-500">
-                                      Select an answer on the left to reveal the explanation and discussion.
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <div className="mb-4">
-                                        <h4 className="font-semibold mb-2">Explanation</h4>
-                                        <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
+                              <div>
+                                <h3 className="font-semibold mb-2">Question Feedback</h3>
+                                <div className="space-y-4 max-h-96 overflow-y-auto">
+                                  {results.perQuestion?.map((q, idx) => (
+                                    <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-800 rounded border">
+                                      <div className="text-sm mb-1 line-clamp-2">{q.question}</div>
+                                      <div className="text-xs text-gray-500">
+                                        Your answer: <span className="font-medium">{q.yourAnswer || "Unattempted"}</span>
                                       </div>
-
-                                      <div className="mb-4">
-                                        <h4 className="font-semibold mb-2">Discussion</h4>
-                                        <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
+                                      <div className="text-xs text-gray-500">
+                                        Correct answer: <span className="font-medium">{q.correctAnswer || "N/A"}</span>
                                       </div>
-
-                                      <div className="flex items-center justify-between pt-2">
-                                        <div className="flex gap-2">
-                                          <Button variant="outline" size="sm">
-                                            <ThumbsUp className="w-4 h-4 mr-1" />
-                                            Helpful
-                                          </Button>
-                                          <Button variant="outline" size="sm">
-                                            <ThumbsDown className="w-4 h-4 mr-1" />
-                                            Not Helpful
-                                          </Button>
-                                        </div>
-                                        <Button variant="outline" size="sm">
-                                          <MessageCircle className="w-4 h-4 mr-1" />
-                                          Discuss
-                                        </Button>
-                                      </div>
-                                    </>
-                                  )}
-                                </CardContent>
-                              </Card>
-                            </div>
-                          </div>
-                        ) : (
-                          /* Test mode: existing single-panel behavior */
-                          <>
-                            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="secondary">{currentQuestion?.exam}</Badge>
-                                <Badge variant="outline">{currentQuestion?.subject}</Badge>
-                                {currentQuestion?.topics.map((topic: string, idx: number) => (
-                                  <Badge key={idx} variant="outline" className="text-xs">
-                                    {topic}
-                                  </Badge>
-                                ))}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => setIsBookmarked(!isBookmarked)} className={isBookmarked ? "text-blue-600" : ""}>
-                                  <Bookmark className="w-4 h-4" />
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => setIsFlagged(!isFlagged)} className={isFlagged ? "text-red-600" : ""}>
-                                  <Flag className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-
-                            <Card>
-                              <CardHeader>
-                                <CardTitle className="text-lg">Question {currentQuestionIndex + 1} of {shownQuestions.length}</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <p className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</p>
-
-                                <RadioGroup value={selectedAnswer || ""} onValueChange={handleAnswerSelect} className="space-y-3 mb-6">
-                                  {currentQuestion?.options.map((option: any) => (
-                                    <div key={option.id} className={`flex items-start p-3 rounded-lg border ${selectedAnswer === option.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"} ${showExplanation && option.id === currentQuestion.correctAnswer ? "border-green-500 bg-green-50 dark:bg-green-900/20" : ""} ${showExplanation && selectedAnswer === option.id && option.id !== currentQuestion.correctAnswer ? "border-red-500 bg-red-50 dark:bg-red-900/20" : ""}`}>
-                                      <input type="radio" name="option" value={option.id} checked={selectedAnswer === option.id} onChange={() => handleAnswerSelect(option.id)} className="mt-1" />
-                                      <Label htmlFor={option.id} className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer">
-                                        <span className="font-medium mr-2">{option.id}.</span>
-                                        {option.text}
-                                      </Label>
                                     </div>
                                   ))}
-                                </RadioGroup>
+                                </div>
+                              </div>
 
-                                {showExplanation && (
-                                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
-                                    <div>
-                                      <h3 className="font-semibold mb-2">Explanation:</h3>
-                                      <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
-                                    </div>
-                                    <div>
-                                      <h3 className="font-semibold mb-2">Discussion:</h3>
-                                      <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
-                                    </div>
-                                    <div className="flex items-center justify-between pt-2">
-                                      <div className="flex gap-2">
-                                        <Button variant="outline" size="sm">
-                                          <ThumbsUp className="w-4 h-4 mr-1" />
-                                          Helpful
-                                        </Button>
-                                        <Button variant="outline" size="sm">
-                                          <ThumbsDown className="w-4 h-4 mr-1" />
-                                          Not Helpful
-                                        </Button>
+                              <div className="mt-4 flex justify-end gap-2">
+                                <Button onClick={() => {
+                                  // allow user to review answers inline by revealing explanation sections
+                                  setTestSubmitted(false);
+                                  setResults(null);
+                                  setTestAnswers({});
+                                  setConfigured(false);
+                                  toast.info("You can reconfigure and retake the test.");
+                                }}>
+                                  Retake / Reconfigure
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          <>
+                            {/* Study mode: show two-panel layout */}
+                            {mode === "study" ? (
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                {/* Left: Question + options */}
+                                <div>
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle className="text-lg">Question {currentQuestionIndex + 1} of {shownQuestions.length}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</div>
+
+                                      <RadioGroup value={selectedAnswer || ""} onValueChange={handleAnswerSelect} className="space-y-3 mb-6">
+                                        {currentQuestion?.options.map((option: any) => (
+                                          <div key={option.id} className={`flex items-start p-3 rounded-lg border ${selectedAnswer === option.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"} ${showExplanation && option.id === (currentQuestion as any).correctAnswer ? "border-green-500 bg-green-50 dark:bg-green-900/20" : ""} ${showExplanation && selectedAnswer === option.id && option.id !== (currentQuestion as any).correctAnswer ? "border-red-500 bg-red-50 dark:bg-red-900/20" : ""}`}>
+                                            <input type="radio" name="option" value={option.id} checked={selectedAnswer === option.id} onChange={() => handleAnswerSelect(option.id)} className="mt-1" />
+                                            <Label htmlFor={option.id} className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer">
+                                              <span className="font-medium mr-2">{option.id}.</span>
+                                              {option.text}
+                                            </Label>
+                                          </div>
+                                        ))}
+                                      </RadioGroup>
+
+                                      <div className="space-y-4">
+                                        <div>
+                                          <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
+                                          <Textarea id="notes" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Add your notes here..." className="mt-1" rows={3} />
+                                        </div>
                                       </div>
-                                      <Button variant="outline" size="sm">
-                                        <MessageCircle className="w-4 h-4 mr-1" />
-                                        Discuss
+                                    </CardContent>
+                                  </Card>
+
+                                  <div className="flex justify-between mt-4">
+                                    <Button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} variant="outline">
+                                      <ChevronLeft className="w-4 h-4 mr-1" />
+                                      Previous
+                                    </Button>
+                                    <div className="flex gap-2">
+                                      {!showExplanation && selectedAnswer && canCheckAnswer() && (
+                                        <Button onClick={() => setShowExplanation(true)}>Check Answer</Button>
+                                      )}
+                                      <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === shownQuestions.length - 1}>
+                                        Next
+                                        <ChevronRight className="w-4 h-4 ml-1" />
                                       </Button>
                                     </div>
                                   </div>
-                                )}
+                                </div>
 
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
-                                    <Textarea id="notes" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Add your notes here..." className="mt-1" rows={3} />
+                                {/* Right: Explanation & Discussion (appears only after selecting an answer) */}
+                                <div>
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle className="text-lg">Explanation & Discussion</CardTitle>
+                                      <CardDescription>
+                                        Detailed reasoning and further notes for this question.
+                                      </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                      {!showExplanation ? (
+                                        <div className="py-12 text-center text-gray-500">
+                                          Select an answer on the left to reveal the explanation and discussion.
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <div className="mb-4">
+                                            <h4 className="font-semibold mb-2">Explanation</h4>
+                                            <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
+                                          </div>
+
+                                          <div className="mb-4">
+                                            <h4 className="font-semibold mb-2">Discussion</h4>
+                                            <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
+                                          </div>
+
+                                          <div className="flex items-center justify-between pt-2">
+                                            <div className="flex gap-2">
+                                              <Button variant="outline" size="sm">
+                                                <ThumbsUp className="w-4 h-4 mr-1" />
+                                                Helpful
+                                              </Button>
+                                              <Button variant="outline" size="sm">
+                                                <ThumbsDown className="w-4 h-4 mr-1" />
+                                                Not Helpful
+                                              </Button>
+                                            </div>
+                                            <Button variant="outline" size="sm">
+                                              <MessageCircle className="w-4 h-4 mr-1" />
+                                              Discuss
+                                            </Button>
+                                          </div>
+                                        </>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              </div>
+                            ) : (
+                              /* Test mode: single-panel behavior with submission controls */
+                              <>
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="secondary">{currentQuestion?.exam}</Badge>
+                                    <Badge variant="outline">{currentQuestion?.subject}</Badge>
+                                    {currentQuestion?.topics.map((topic: string, idx: number) => (
+                                      <Badge key={idx} variant="outline" className="text-xs">
+                                        {topic}
+                                      </Badge>
+                                    ))}
+                                  </div>
+
+                                  <div className="text-sm text-gray-600">
+                                    Answered: <span className="font-semibold">{answeredCount}</span> • Remaining: <span className="font-semibold">{remainingCount}</span>
                                   </div>
                                 </div>
-                              </CardContent>
-                            </Card>
 
-                            <div className="flex justify-between">
-                              <Button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} variant="outline">
-                                <ChevronLeft className="w-4 h-4 mr-1" />
-                                Previous
-                              </Button>
-                              <div className="flex gap-2">
-                                {!showExplanation && selectedAnswer && canCheckAnswer() && (
-                                  <Button onClick={() => setShowExplanation(true)}>Check Answer</Button>
-                                )}
-                                <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === shownQuestions.length - 1}>
-                                  Next
-                                  <ChevronRight className="w-4 h-4 ml-1" />
-                                </Button>
-                              </div>
-                            </div>
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle className="text-lg">Question {currentQuestionIndex + 1} of {shownQuestions.length}</CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <p className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</p>
+
+                                    <RadioGroup value={selectedAnswer || ""} onValueChange={handleAnswerSelect} className="space-y-3 mb-6">
+                                      {currentQuestion?.options.map((option: any) => (
+                                        <div key={option.id} className={`flex items-start p-3 rounded-lg border ${selectedAnswer === option.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"} ${showExplanation && option.id === (currentQuestion as any).correctAnswer ? "border-green-500 bg-green-50 dark:bg-green-900/20" : ""} ${showExplanation && selectedAnswer === option.id && option.id !== (currentQuestion as any).correctAnswer ? "border-red-500 bg-red-50 dark:bg-red-900/20" : ""}`}>
+                                          <input type="radio" name="option" value={option.id} checked={selectedAnswer === option.id} onChange={() => handleAnswerSelect(option.id)} className="mt-1" />
+                                          <Label htmlFor={option.id} className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer">
+                                            <span className="font-medium mr-2">{option.id}.</span>
+                                            {option.text}
+                                          </Label>
+                                        </div>
+                                      ))}
+                                    </RadioGroup>
+
+                                    {showExplanation && (
+                                      <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
+                                        <div>
+                                          <h3 className="font-semibold mb-2">Explanation:</h3>
+                                          <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
+                                        </div>
+                                        <div>
+                                          <h3 className="font-semibold mb-2">Discussion:</h3>
+                                          <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
+                                        </div>
+                                        <div className="flex items-center justify-between pt-2">
+                                          <div className="flex gap-2">
+                                            <Button variant="outline" size="sm">
+                                              <ThumbsUp className="w-4 h-4 mr-1" />
+                                              Helpful
+                                            </Button>
+                                            <Button variant="outline" size="sm">
+                                              <ThumbsDown className="w-4 h-4 mr-1" />
+                                              Not Helpful
+                                            </Button>
+                                          </div>
+                                          <Button variant="outline" size="sm">
+                                            <MessageCircle className="w-4 h-4 mr-1" />
+                                            Discuss
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
+                                        <Textarea id="notes" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Add your notes here..." className="mt-1" rows={3} />
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                <div className="flex justify-between mt-4">
+                                  <Button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} variant="outline">
+                                    <ChevronLeft className="w-4 h-4 mr-1" />
+                                    Previous
+                                  </Button>
+
+                                  <div className="flex gap-2 items-center">
+                                    <Button
+                                      variant="destructive"
+                                      onClick={() => setConfirmOpen(true)}
+                                      disabled={answeredCount === 0}
+                                    >
+                                      Submit Test
+                                    </Button>
+
+                                    <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === shownQuestions.length - 1}>
+                                      Next
+                                      <ChevronRight className="w-4 h-4 ml-1" />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {/* Confirmation dialog */}
+                                <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Submit Test</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="py-2">
+                                      <p>You're about to submit the test. Submitted answers cannot be changed. Are you sure you want to submit?</p>
+                                      <div className="mt-3 text-sm text-gray-600">
+                                        Answered: <span className="font-semibold">{answeredCount}</span> • Remaining: <span className="font-semibold">{remainingCount}</span>
+                                      </div>
+                                    </div>
+                                    <DialogFooter>
+                                      <div className="flex gap-2 justify-end">
+                                        <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+                                        <Button onClick={handleConfirmSubmit}>Confirm & Submit</Button>
+                                      </div>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              </>
+                            )}
                           </>
                         )}
                       </>
