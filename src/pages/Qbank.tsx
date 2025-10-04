@@ -19,11 +19,6 @@ import {
   Bookmark,
   ChevronLeft,
   ChevronRight,
-  Pause,
-  Play,
-  Settings,
-  Plus,
-  Filter,
   Sliders
 } from "lucide-react";
 import { Footer } from "@/components/Footer";
@@ -33,7 +28,6 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 type Mode = "study" | "test";
 
@@ -162,13 +156,6 @@ const qbankStats = {
   ],
 };
 
-// Mock question sets
-const mockQuestionSets = [
-  { id: 1, name: "Cardiology Review", exam: "MRCP", subject: "Cardiology", count: 25, createdAt: "2023-05-15" },
-  { id: 2, name: "Nephrology Basics", exam: "FCPS", subject: "Nephrology", count: 18, createdAt: "2023-06-22" },
-  { id: 3, name: "Neurology Emergencies", exam: "USMLE", subject: "Neurology", count: 32, createdAt: "2023-07-10" },
-];
-
 const Qbank = () => {
   const [mode, setMode] = useState<Mode>("study");
   const [activeTab, setActiveTab] = useState<"statistics" | "questions">("questions");
@@ -200,15 +187,13 @@ const Qbank = () => {
     avoidPreviouslyCorrect: false,
   });
 
-  // study settings (new variables requested)
+  // study settings (adjusted per request)
   const [studySettings, setStudySettings] = useState({
-    difficulty: "all", // all | beginner | intermediate | advanced
     includeLocked: false,
-    questionFormat: "mcq", // mcq | saq | truefalse
-    sessionLength: 20, // number of questions in a study session
+    numberOfQuestions: 20, // previously sessionLength, now number of questions
     spacedRepetition: false,
-    includePreviouslyStudied: true, // NEW: include previously studied questions
-    avoidPreviouslyCorrect: false, // NEW: avoid questions the user previously answered correctly
+    includePreviouslyStudied: true,
+    avoidPreviouslyCorrect: false,
   });
 
   // Mock previously studied / previously correct question IDs.
@@ -220,22 +205,8 @@ const Qbank = () => {
   const [selectedExams, setSelectedExams] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
-  // study filters (kept for compatibility; exam/subject now come from multi-selects)
-  const [studyFilters, setStudyFilters] = useState({
-    exam: "all",
-    subject: "all",
-    topics: [] as string[],
-    tags: [] as string[],
-  });
-
   // configuration gating
   const [configured, setConfigured] = useState(false);
-
-  // dialog + set creation
-  const [showCreateSetDialog, setShowCreateSetDialog] = useState(false);
-  const [newSetName, setNewSetName] = useState("");
-  const [selectedQuestionsForSet, setSelectedQuestionsForSet] = useState<number[]>([]);
-  const [activeQuestionSet, setActiveQuestionSet] = useState<number | null>(null);
 
   const [testAnswers, setTestAnswers] = useState<Record<number, string>>({});
   const [flaggedQuestions, setFlaggedQuestions] = useState<number[]>([]);
@@ -253,10 +224,6 @@ const Qbank = () => {
     return Array.from(s);
   }, []);
 
-  // derive sets
-  const unlockedQuestions = mockQuestions.filter((q) => q.status === "unlocked");
-  const lockedQuestions = mockQuestions.filter((q) => q.status === "locked");
-
   // Privilege handler: returns true if user can access locked content.
   const privilegedHandler = (questionStatus: string) => {
     if (questionStatus !== "locked") return true;
@@ -267,17 +234,36 @@ const Qbank = () => {
     return false;
   };
 
+  // Compute how many questions are available given current exam/subject filters and privileges
+  const maxAvailableQuestions = useMemo(() => {
+    let base = mockQuestions;
+
+    // apply exam filter: if 'all' selected or none selected -> include all
+    if (selectedExams.length > 0 && !selectedExams.includes("all")) {
+      base = base.filter((q) => selectedExams.includes(q.exam));
+    }
+
+    // apply subject filter
+    if (selectedSubjects.length > 0 && !selectedSubjects.includes("all")) {
+      base = base.filter((q) => selectedSubjects.includes(q.subject));
+    }
+
+    // count only questions the user can access (respect privileges)
+    const accessible = base.filter((q) => q.status !== "locked" || privilegedHandler(q.status));
+    return accessible.length;
+  }, [selectedExams, selectedSubjects]);
+
   // Determine which questions to show based on configuration and privileges
   const shownQuestions = useMemo(() => {
     let base = mockQuestions;
 
-    // Filter by exams multi-select if any chosen
-    if (selectedExams.length > 0) {
+    // Apply exams filter (if 'all' or none selected => don't filter)
+    if (selectedExams.length > 0 && !selectedExams.includes("all")) {
       base = base.filter((q) => selectedExams.includes(q.exam));
     }
 
-    // Filter by subjects multi-select if any chosen
-    if (selectedSubjects.length > 0) {
+    // Apply subjects filter
+    if (selectedSubjects.length > 0 && !selectedSubjects.includes("all")) {
       base = base.filter((q) => selectedSubjects.includes(q.subject));
     }
 
@@ -299,9 +285,9 @@ const Qbank = () => {
         base = base.filter((q) => !previouslyCorrectIds.includes(q.id));
       }
 
-      // Apply question format / difficulty if available (mock doesn't include those fields)
-      // Limit to session length
-      base = base.slice(0, Math.max(1, studySettings.sessionLength));
+      // Limit to numberOfQuestions but cap at available items
+      const limit = Math.max(1, Math.min(studySettings.numberOfQuestions, base.length));
+      base = base.slice(0, limit);
     } else {
       // Test mode: include locked only if privileged
       base = base.filter((q) => q.status !== "locked" || privilegedHandler(q.status));
@@ -353,13 +339,9 @@ const Qbank = () => {
 
   // Validate configuration before revealing question content
   const validateConfiguration = () => {
-    // Require at least one exam or subject selected (or allow selecting none meaning 'all')
-    const examsOk = selectedExams.length > 0 || selectedExams.length === 0;
-    const subjectsOk = selectedSubjects.length > 0 || selectedSubjects.length === 0;
-
+    // For study: numberOfQuestions > 0 and not exceeding available
     if (mode === "study") {
-      // require session length positive
-      return examsOk && subjectsOk && studySettings.sessionLength > 0;
+      return studySettings.numberOfQuestions > 0 && studySettings.numberOfQuestions <= Math.max(1, maxAvailableQuestions);
     } else {
       // test mode: ensure positive time & questions & passScore valid
       return testSettings.questionsPerTest > 0 && testSettings.timeLimit > 0 && testSettings.passScore >= 0 && testSettings.passScore <= 100;
@@ -368,13 +350,15 @@ const Qbank = () => {
 
   const applyConfiguration = () => {
     if (!validateConfiguration()) {
-      alert("Please complete the configuration before starting.");
+      alert("Please complete the configuration before starting (ensure number of questions/time are valid).");
       return;
     }
+    // reset question view state
     setConfigured(true);
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setShowExplanation(false);
+    // set timer for test mode
     if (mode === "test") {
       setTimeRemaining(testSettings.timeLimit * 60);
       setIsTimerRunning(false);
@@ -411,13 +395,27 @@ const Qbank = () => {
     }
   };
 
-  const toggleFlagQuestion = (index: number) => {
-    setFlaggedQuestions((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
+  // Helper to update multi-select handling when 'all' chosen
+  const handleExamMultiSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const vals = Array.from(e.target.selectedOptions).map((o) => o.value);
+    if (vals.includes("all")) {
+      setSelectedExams(["all"]);
+    } else {
+      setSelectedExams(vals);
+    }
+  };
+
+  const handleSubjectMultiSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const vals = Array.from(e.target.selectedOptions).map((o) => o.value);
+    if (vals.includes("all")) {
+      setSelectedSubjects(["all"]);
+    } else {
+      setSelectedSubjects(vals);
+    }
   };
 
   // Quick helpers
   const contributionProgress = Math.min(100, (mockStats.unlocked / mockStats.totalQuestions) * 100);
-  const subscriptionProgress = mockStats.subscriptionActive ? 100 : 0;
   const answeredProgress = (mockStats.answered / mockStats.unlocked) * 100;
 
   const formatTime = (seconds: number) => {
@@ -553,18 +551,17 @@ const Qbank = () => {
                     <select
                       multiple
                       value={selectedExams}
-                      onChange={(e) =>
-                        setSelectedExams(Array.from(e.target.selectedOptions).map((o) => o.value))
-                      }
+                      onChange={handleExamMultiSelect}
                       className="w-full border rounded p-2"
                     >
+                      <option value="all">All Exams</option>
                       {availableExams.map((ex) => (
                         <option key={ex} value={ex}>
                           {ex}
                         </option>
                       ))}
                     </select>
-                    <div className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple exams; leave empty to include all.</div>
+                    <div className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple exams; choose "All Exams" or leave empty to include all.</div>
                   </div>
 
                   {/* Multi-select for Subjects */}
@@ -573,69 +570,46 @@ const Qbank = () => {
                     <select
                       multiple
                       value={selectedSubjects}
-                      onChange={(e) =>
-                        setSelectedSubjects(Array.from(e.target.selectedOptions).map((o) => o.value))
-                      }
+                      onChange={handleSubjectMultiSelect}
                       className="w-full border rounded p-2"
                     >
+                      <option value="all">All Subjects</option>
                       {availableSubjects.map((s) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
                       ))}
                     </select>
-                    <div className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple subjects; leave empty to include all.</div>
+                    <div className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple subjects; choose "All Subjects" or leave empty to include all.</div>
                   </div>
 
                   {mode === "study" ? (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                         <div>
-                          <Label className="text-sm font-medium">Difficulty</Label>
-                          <Select value={studySettings.difficulty} onValueChange={(v) => setStudySettings({ ...studySettings, difficulty: v })}>
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All</SelectItem>
-                              <SelectItem value="beginner">Beginner</SelectItem>
-                              <SelectItem value="intermediate">Intermediate</SelectItem>
-                              <SelectItem value="advanced">Advanced</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Label className="text-sm font-medium">Format</Label>
-                          <Select value={studySettings.questionFormat} onValueChange={(v) => setStudySettings({ ...studySettings, questionFormat: v })}>
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mcq">MCQ</SelectItem>
-                              <SelectItem value="saq">SAQ</SelectItem>
-                              <SelectItem value="truefalse">True/False</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Label className="text-sm font-medium">Session Length (questions)</Label>
+                          <Label className="text-sm font-medium">Number of Questions</Label>
                           <Input
                             type="number"
                             min={1}
-                            value={studySettings.sessionLength}
-                            onChange={(e) => setStudySettings({ ...studySettings, sessionLength: Math.max(1, Number(e.target.value)) })}
+                            max={Math.max(1, maxAvailableQuestions)}
+                            value={studySettings.numberOfQuestions}
+                            onChange={(e) => setStudySettings({ ...studySettings, numberOfQuestions: Math.max(1, Math.min(Number(e.target.value || 1), Math.max(1, maxAvailableQuestions))) })}
                           />
+                          <div className="text-xs text-gray-500 mt-1">Max available based on your access: {maxAvailableQuestions}</div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-6">
                         <div className="flex items-center space-x-2">
                           <Switch id="include-locked" checked={studySettings.includeLocked} onCheckedChange={(checked) => setStudySettings({ ...studySettings, includeLocked: !!checked })} />
                           <Label htmlFor="include-locked">Include locked questions (only shown if you have access)</Label>
                         </div>
 
+                        <div className="flex items-center space-x-2">
+                          <Switch id="spaced-rep" checked={studySettings.spacedRepetition} onCheckedChange={(checked) => setStudySettings({ ...studySettings, spacedRepetition: !!checked })} />
+                          <Label htmlFor="spaced-rep">Enable spaced repetition</Label>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-6">
                         <div className="flex items-center space-x-2">
                           <Switch id="include-prev-studied" checked={studySettings.includePreviouslyStudied} onCheckedChange={(checked) => setStudySettings({ ...studySettings, includePreviouslyStudied: !!checked })} />
                           <Label htmlFor="include-prev-studied">Include previously studied questions</Label>
@@ -647,15 +621,8 @@ const Qbank = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Switch id="spaced-rep" checked={studySettings.spacedRepetition} onCheckedChange={(checked) => setStudySettings({ ...studySettings, spacedRepetition: !!checked })} />
-                          <Label htmlFor="spaced-rep">Enable spaced repetition</Label>
-                        </div>
-                      </div>
-
                       <div className="text-sm text-gray-500">
-                        Optionally choose topics/tags below or leave subjects/exams empty to include the full unlocked set.
+                        Optionally choose topics/tags or leave exams/subjects as "All" to include the full accessible set.
                       </div>
                     </>
                   ) : (
