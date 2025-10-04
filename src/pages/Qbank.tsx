@@ -762,98 +762,193 @@ const Qbank = () => {
                       </Card>
                     ) : (
                       <>
-                        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{currentQuestion?.exam}</Badge>
-                            <Badge variant="outline">{currentQuestion?.subject}</Badge>
-                            {currentQuestion?.topics.map((topic: string, idx: number) => (
-                              <Badge key={idx} variant="outline" className="text-xs">
-                                {topic}
-                              </Badge>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={() => setIsBookmarked(!isBookmarked)} className={isBookmarked ? "text-blue-600" : ""}>
-                              <Bookmark className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => setIsFlagged(!isFlagged)} className={isFlagged ? "text-red-600" : ""}>
-                              <Flag className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
+                        {/* Study mode: show two-panel layout */}
+                        {mode === "study" ? (
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {/* Left: Question + options */}
+                            <div>
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle className="text-lg">Question {currentQuestionIndex + 1} of {shownQuestions.length}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</div>
 
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">Question {currentQuestionIndex + 1} of {shownQuestions.length}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <p className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</p>
+                                  <RadioGroup value={selectedAnswer || ""} onValueChange={handleAnswerSelect} className="space-y-3 mb-6">
+                                    {currentQuestion?.options.map((option: any) => (
+                                      <div key={option.id} className={`flex items-start p-3 rounded-lg border ${selectedAnswer === option.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"} ${showExplanation && option.id === currentQuestion.correctAnswer ? "border-green-500 bg-green-50 dark:bg-green-900/20" : ""} ${showExplanation && selectedAnswer === option.id && option.id !== currentQuestion.correctAnswer ? "border-red-500 bg-red-50 dark:bg-red-900/20" : ""}`}>
+                                        <input type="radio" name="option" value={option.id} checked={selectedAnswer === option.id} onChange={() => handleAnswerSelect(option.id)} className="mt-1" />
+                                        <Label htmlFor={option.id} className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer">
+                                          <span className="font-medium mr-2">{option.id}.</span>
+                                          {option.text}
+                                        </Label>
+                                      </div>
+                                    ))}
+                                  </RadioGroup>
 
-                            <RadioGroup value={selectedAnswer || ""} onValueChange={handleAnswerSelect} className="space-y-3 mb-6">
-                              {currentQuestion?.options.map((option: any) => (
-                                <div key={option.id} className={`flex items-start p-3 rounded-lg border ${selectedAnswer === option.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"} ${showExplanation && option.id === currentQuestion.correctAnswer ? "border-green-500 bg-green-50 dark:bg-green-900/20" : ""} ${showExplanation && selectedAnswer === option.id && option.id !== currentQuestion.correctAnswer ? "border-red-500 bg-red-50 dark:bg-red-900/20" : ""}`}>
-                                  <input type="radio" name="option" value={option.id} checked={selectedAnswer === option.id} onChange={() => handleAnswerSelect(option.id)} className="mt-1" />
-                                  <Label htmlFor={option.id} className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer">
-                                    <span className="font-medium mr-2">{option.id}.</span>
-                                    {option.text}
-                                  </Label>
-                                </div>
-                              ))}
-                            </RadioGroup>
-
-                            {showExplanation && (
-                              <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
-                                <div>
-                                  <h3 className="font-semibold mb-2">Explanation:</h3>
-                                  <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
-                                </div>
-                                <div>
-                                  <h3 className="font-semibold mb-2">Discussion:</h3>
-                                  <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
-                                </div>
-                                <div className="flex items-center justify-between pt-2">
-                                  <div className="flex gap-2">
-                                    <Button variant="outline" size="sm">
-                                      <ThumbsUp className="w-4 h-4 mr-1" />
-                                      Helpful
-                                    </Button>
-                                    <Button variant="outline" size="sm">
-                                      <ThumbsDown className="w-4 h-4 mr-1" />
-                                      Not Helpful
-                                    </Button>
+                                  <div className="space-y-4">
+                                    <div>
+                                      <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
+                                      <Textarea id="notes" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Add your notes here..." className="mt-1" rows={3} />
+                                    </div>
                                   </div>
-                                  <Button variant="outline" size="sm">
-                                    <MessageCircle className="w-4 h-4 mr-1" />
-                                    Discuss
+                                </CardContent>
+                              </Card>
+
+                              <div className="flex justify-between mt-4">
+                                <Button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} variant="outline">
+                                  <ChevronLeft className="w-4 h-4 mr-1" />
+                                  Previous
+                                </Button>
+                                <div className="flex gap-2">
+                                  {!showExplanation && selectedAnswer && (
+                                    <Button onClick={() => setShowExplanation(true)}>Check Answer</Button>
+                                  )}
+                                  <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === shownQuestions.length - 1}>
+                                    Next
+                                    <ChevronRight className="w-4 h-4 ml-1" />
                                   </Button>
                                 </div>
                               </div>
-                            )}
+                            </div>
 
-                            <div className="space-y-4">
-                              <div>
-                                <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
-                                <Textarea id="notes" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Add your notes here..." className="mt-1" rows={3} />
+                            {/* Right: Explanation & Discussion */}
+                            <div>
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle className="text-lg">Explanation & Discussion</CardTitle>
+                                  <CardDescription>
+                                    Detailed reasoning and further notes for this question.
+                                  </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="mb-4">
+                                    <h4 className="font-semibold mb-2">Explanation</h4>
+                                    <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
+                                  </div>
+
+                                  <div className="mb-4">
+                                    <h4 className="font-semibold mb-2">Discussion</h4>
+                                    <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
+                                  </div>
+
+                                  <div className="flex items-center justify-between pt-2">
+                                    <div className="flex gap-2">
+                                      <Button variant="outline" size="sm">
+                                        <ThumbsUp className="w-4 h-4 mr-1" />
+                                        Helpful
+                                      </Button>
+                                      <Button variant="outline" size="sm">
+                                        <ThumbsDown className="w-4 h-4 mr-1" />
+                                        Not Helpful
+                                      </Button>
+                                    </div>
+                                    <Button variant="outline" size="sm">
+                                      <MessageCircle className="w-4 h-4 mr-1" />
+                                      Discuss
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Test mode: existing single-panel behavior */
+                          <>
+                            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary">{currentQuestion?.exam}</Badge>
+                                <Badge variant="outline">{currentQuestion?.subject}</Badge>
+                                {currentQuestion?.topics.map((topic: string, idx: number) => (
+                                  <Badge key={idx} variant="outline" className="text-xs">
+                                    {topic}
+                                  </Badge>
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setIsBookmarked(!isBookmarked)} className={isBookmarked ? "text-blue-600" : ""}>
+                                  <Bookmark className="w-4 h-4" />
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => setIsFlagged(!isFlagged)} className={isFlagged ? "text-red-600" : ""}>
+                                  <Flag className="w-4 h-4" />
+                                </Button>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
 
-                        <div className="flex justify-between">
-                          <Button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} variant="outline">
-                            <ChevronLeft className="w-4 h-4 mr-1" />
-                            Previous
-                          </Button>
-                          <div className="flex gap-2">
-                            {!showExplanation && selectedAnswer && (
-                              <Button onClick={() => setShowExplanation(true)}>Check Answer</Button>
-                            )}
-                            <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === shownQuestions.length - 1}>
-                              Next
-                              <ChevronRight className="w-4 h-4 ml-1" />
-                            </Button>
-                          </div>
-                        </div>
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="text-lg">Question {currentQuestionIndex + 1} of {shownQuestions.length}</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="mb-6 text-gray-800 dark:text-gray-200">{currentQuestion?.question}</p>
+
+                                <RadioGroup value={selectedAnswer || ""} onValueChange={handleAnswerSelect} className="space-y-3 mb-6">
+                                  {currentQuestion?.options.map((option: any) => (
+                                    <div key={option.id} className={`flex items-start p-3 rounded-lg border ${selectedAnswer === option.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"} ${showExplanation && option.id === currentQuestion.correctAnswer ? "border-green-500 bg-green-50 dark:bg-green-900/20" : ""} ${showExplanation && selectedAnswer === option.id && option.id !== currentQuestion.correctAnswer ? "border-red-500 bg-red-50 dark:bg-red-900/20" : ""}`}>
+                                      <input type="radio" name="option" value={option.id} checked={selectedAnswer === option.id} onChange={() => handleAnswerSelect(option.id)} className="mt-1" />
+                                      <Label htmlFor={option.id} className="ml-3 flex-1 text-gray-800 dark:text-gray-200 cursor-pointer">
+                                        <span className="font-medium mr-2">{option.id}.</span>
+                                        {option.text}
+                                      </Label>
+                                    </div>
+                                  ))}
+                                </RadioGroup>
+
+                                {showExplanation && (
+                                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
+                                    <div>
+                                      <h3 className="font-semibold mb-2">Explanation:</h3>
+                                      <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.explanation}</p>
+                                    </div>
+                                    <div>
+                                      <h3 className="font-semibold mb-2">Discussion:</h3>
+                                      <p className="text-gray-700 dark:text-gray-300">{currentQuestion?.discussion}</p>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-2">
+                                      <div className="flex gap-2">
+                                        <Button variant="outline" size="sm">
+                                          <ThumbsUp className="w-4 h-4 mr-1" />
+                                          Helpful
+                                        </Button>
+                                        <Button variant="outline" size="sm">
+                                          <ThumbsDown className="w-4 h-4 mr-1" />
+                                          Not Helpful
+                                        </Button>
+                                      </div>
+                                      <Button variant="outline" size="sm">
+                                        <MessageCircle className="w-4 h-4 mr-1" />
+                                        Discuss
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="notes" className="text-sm font-medium">My Notes</Label>
+                                    <Textarea id="notes" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Add your notes here..." className="mt-1" rows={3} />
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+
+                            <div className="flex justify-between">
+                              <Button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} variant="outline">
+                                <ChevronLeft className="w-4 h-4 mr-1" />
+                                Previous
+                              </Button>
+                              <div className="flex gap-2">
+                                {!showExplanation && selectedAnswer && (
+                                  <Button onClick={() => setShowExplanation(true)}>Check Answer</Button>
+                                )}
+                                <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === shownQuestions.length - 1}>
+                                  Next
+                                  <ChevronRight className="w-4 h-4 ml-1" />
+                                </Button>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </>
                     )}
                   </>
